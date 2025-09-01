@@ -1,0 +1,27 @@
+syntax = "proto3";
+
+package common;
+
+message Empty {}
+
+message Error {
+  string code = 1;
+  string message = 2;
+  repeated string details = 3;
+}
+
+message PaginationRequest {
+  int32 page = 1;
+  int32 limit = 2;
+  string sortBy = 3;
+  string sortOrder = 4;
+}
+
+message PaginationResponse {
+  int32 currentPage = 1;
+  int32 totalPages = 2;
+  int32 totalItems = 3;
+  int32 itemsPerPage = 4;
+  bool hasNext = 5;
+  bool hasPrevious = 6;
+}

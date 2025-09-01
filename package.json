@@ -1,0 +1,17 @@
+{
+  "name": "aetherconnect",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": ["services/*", "packages/*"],
+  "scripts": {
+    "dev": "concurrently \"pnpm dev:auth\" \"pnpm dev:gateway\"",
+    "dev:auth": "cd services/auth-service-nestjs && pnpm exec nest start --watch",
+    "dev:gateway": "cd services/api-gateway && pnpm exec nest start --watch",
+    "build": "pnpm -r run build",
+    "docker:up": "docker compose up -d",
+    "setup": "pnpm install && pnpm docker:up && sleep 5"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}

@@ -1,0 +1,91 @@
+syntax = "proto3";
+
+package auth;
+
+service AuthService {
+  rpc CreateUser(CreateUserRequest) returns (UserResponse);
+  rpc ValidateToken(ValidateTokenRequest) returns (ValidateTokenResponse);
+  rpc Login(LoginRequest) returns (AuthResponse);
+  rpc RefreshToken(RefreshTokenRequest) returns (AuthResponse);
+  rpc GetUserProfile(GetUserProfileRequest) returns (UserResponse);
+  rpc UpdateUserProfile(UpdateUserProfileRequest) returns (UserResponse);
+  rpc HealthCheck(HealthCheckRequest) returns (HealthCheckResponse);
+}
+
+message CreateUserRequest {
+  string username = 1;
+  string email = 2;
+  string password = 3;
+  string firstName = 4;
+  string lastName = 5;
+  repeated string roles = 6;
+}
+
+message LoginRequest {
+  string email = 1;
+  string password = 2;
+}
+
+message ValidateTokenRequest {
+  string token = 1;
+}
+
+message RefreshTokenRequest {
+  string refreshToken = 1;
+}
+
+message GetUserProfileRequest {
+  string userId = 1;
+}
+
+message UpdateUserProfileRequest {
+  string userId = 1;
+  optional string firstName = 2;
+  optional string lastName = 3;
+  optional string username = 4;
+}
+
+message HealthCheckRequest {}
+
+message UserResponse {
+  bool success = 1;
+  string message = 2;
+  optional UserData user = 3;
+  optional string error = 4;
+}
+
+message ValidateTokenResponse {
+  bool success = 1;
+  string message = 2;
+  optional UserData user = 3;
+  bool isValid = 4;
+  optional string error = 5;
+}
+
+message AuthResponse {
+  bool success = 1;
+  string message = 2;
+  optional UserData user = 3;
+  optional string accessToken = 4;
+  optional string refreshToken = 5;
+  optional string error = 6;
+}
+
+message HealthCheckResponse {
+  bool success = 1;
+  string message = 2;
+  string service = 3;
+  string version = 4;
+  string timestamp = 5;
+}
+
+message UserData {
+  string id = 1;
+  string username = 2;
+  string email = 3;
+  string firstName = 4;
+  string lastName = 5;
+  repeated string roles = 6;
+  string createdAt = 7;
+  string updatedAt = 8;
+}
