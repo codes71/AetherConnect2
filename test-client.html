@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>AetherConnect Test Client</title>
+    <script src="https://cdn.socket.io/4.7.4/socket.io.min.js"></script>
+</head>
+<body>
+    <h1>AetherConnect Chat Test</h1>
+    
+    <div>
+        <input id="token" placeholder="JWT Token" style="width: 400px;"/>
+        <button onclick="connect()">Connect</button>
+    </div>
+    
+    <div>
+        <input id="roomId" placeholder="Room ID (e.g., general)" value="general"/>
+        <button onclick="joinRoom()">Join Room</button>
+    </div>
+    
+    <div>
+        <input id="message" placeholder="Type a message"/>
+        <button onclick="sendMessage()">Send</button>
+    </div>
+    
+    <div>
+        <h3>Messages:</h3>
+        <div id="messages" style="border: 1px solid #ccc; height: 300px; overflow-y: scroll; padding: 10px;"></div>
+    </div>
+
+    <script>
+        let socket = null;
+        
+        function connect() {
+            const token = document.getElementById('token').value;
+            if (!token) {
+                alert('Please enter a JWT token');
+                return;
+            }
+            
+            socket = io('http://localhost:3002', {
+                auth: {
+                    token: token
+                },
+                transports: ['websocket'] // Force websocket transport
+            });
+            
+            // Add these new logs for connection status
+            socket.on('connect', () => {
+                console.log('Socket connected!');
+                addMessage('✅ Socket connected to server.');
+            });
+            
+            socket.on('disconnect', (reason) => {
+                console.log('Socket disconnected:', reason);
+                addMessage(`❌ Socket disconnected: ${reason}`);
+            });
+
+            socket.on('connect_error', (error) => {
+                console.error('Socket connection error:', error);
+                addMessage(`❌ Connection Error: ${error.message}`);
+            });
+            
+            socket.on('connected', (data) => {
+                console.log('Received "connected" event:', data);
+                addMessage('✅ Connected: ' + data.message);
+            });
+            
+            socket.on('new_message', (data) => {
+                console.log('Received "new_message" event:', data);
+                addMessage(`${data.username}: ${data.content}`);
+            });
+            
+            socket.on('user_joined', (data) => {
+                console.log('Received "user_joined" event:', data);
+                addMessage(`👋 ${data.username} joined the room`);
+            });
+            
+            socket.on('user_left', (data) => {
+                console.log('Received "user_left" event:', data);
+                addMessage(`👋 ${data.username} left the room`);
+            });
+            
+            socket.on('error', (data) => {
+                console.error('Received "error" event:', data);
+                addMessage('❌ Error: ' + data.message);
+            });
+        }
+        
+        function joinRoom() {
+            const roomId = document.getElementById('roomId').value;
+            if (socket && roomId) {
+                console.log('Emitting "join_room" with roomId:', roomId);
+                socket.emit('join_room', { roomId });
+            } else {
+                console.warn('Cannot join room: Socket not connected or roomId is empty.');
+            }
+        }
+        
+        function sendMessage() {
+            const message = document.getElementById('message').value;
+            const roomId = document.getElementById('roomId').value;
+            
+            if (socket && message && roomId) {
+                console.log('Emitting "send_message" with roomId:', roomId, 'content:', message);
+                socket.emit('send_message', { 
+                    roomId, 
+                    content: message,
+                    messageType: 'text'
+                });
+                document.getElementById('message').value = '';
+            }
+        } 
+        
+        function addMessage(text) {
+            const messages = document.getElementById('messages');
+            const div = document.createElement('div');
+            div.textContent = new Date().toLocaleTimeString() + ' - ' + text;
+            messages.appendChild(div);
+            messages.scrollTop = messages.scrollHeight;
+        }
+    </script>
+</body>
+</html>

@@ -1,5 +1,7 @@
 version: '3.8'
+
 services:
+  # PostgreSQL for Auth Service
   postgres:
     image: postgres:15-alpine
     container_name: aether-postgres
@@ -16,6 +18,33 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    networks:
+      - aether-network
+
+  
+
+  # Redis for Socket.io and Caching
+  redis:
+    image: redis:7-alpine
+    container_name: aether-redis
+    command: redis-server --appendonly yes --requirepass aether_secret_2025
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - aether-network
 
 volumes:
   postgres_data:
+  redis_data:
+
+networks:
+  aether-network:
+    driver: bridge
+    name: aetherconnect-network

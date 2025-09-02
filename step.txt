@@ -16,107 +16,254 @@ Phase 8	22-24	AI moderation + Redis caching	Content filtering working
 Phase 9	25-27	Observability (metrics/logs)	Monitoring dashboards
 Phase 10	28-30	Production deployment	Kubernetes + CI/CD
 
-# 🚀 Phase 3: NestJS + gRPC Microservices Transition (Days 7-9)
+# Phase 3 Complete - Moving to Phase 4!
 
-**LET'S GO!** Time for the **real architectural transformation**! We're converting your Express service into enterprise-grade NestJS microservices with gRPC communication.
+**Amazing work!** Your microservices architecture with NestJS + gRPC is now solid. Time for **Phase 4: WebSocket Messaging Service** - this is where your chat app comes to life with real-time messaging!
 
 ***
 
-# Day 7: Project Restructure & Protobuf Setup
+# Phase 4: WebSocket Messaging Service (Days 10-12)
 
-## Step 1: Create New Project Structure
+## Phase 4 Goals
+**Build a real-time messaging system** with Socket.io, MongoDB message persistence, and Redis for horizontal scaling.
 
-```bash
-# Navigate to your project root
-cd aetherconnect
+### What You'll Accomplish:
+- **Message Service** (NestJS + gRPC) with Socket.io gateway
+- **MongoDB integration** for message persistence  
+- **Redis adapter** for Socket.io horizontal scaling
+- **Real-time messaging** between clients
+- **Message history** with pagination
+- **Integration** with Auth Service for user validation
 
-# Create new structure for microservices
-mkdir -p packages/shared/src/{grpc,dtos,types,constants,utils}
-mkdir -p packages/protos
-mkdir -p services/auth-service-nestjs/src/{auth,users,database,common}
-mkdir -p services/api-gateway/src/{auth,common,middleware}
+***
 
-# Keep your old Express service for reference
-mv services/auth-service services/auth-service-express-backup
+# Day 10: Message Service Setup & TypeScript Configs
+
+## Step 1: All Required TypeScript Configurations
+
+### **Root tsconfig.json**
+```json
+{
+  "compilerOptions": {
+    "module": "commonjs",
+    "declaration": true,
+    "removeComments": true,
+    "emitDecoratorMetadata": true,
+    "experimentalDecorators": true,
+    "allowSyntheticDefaultImports": true,
+    "target": "es2017",
+    "sourceMap": true,
+    "outDir": "./dist",
+    "baseUrl": "./",
+    "incremental": true,
+    "skipLibCheck": true,
+    "strictNullChecks": false,
+    "noImplicitAny": false,
+    "strictBindCallApply": false,
+    "forceConsistentCasingInFileNames": false,
+    "noFallthroughCasesInSwitch": false,
+    "resolveJsonModule": true,
+    "esModuleInterop": true,
+    "paths": {
+      "@aether/shared/*": ["packages/shared/src/*"],
+      "@aether/protos/*": ["packages/protos/*"]
+    }
+  },
+  "exclude": ["node_modules", "dist"]
+}
 ```
 
-**What this does**: Sets up proper microservices structure with shared libraries and proto definitions.
+### **packages/shared/tsconfig.json**
+```json
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "outDir": "./dist",
+    "rootDir": "./src"
+  },
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "dist", "**/*.test.ts"]
+}
+```
 
-## Step 2: Protocol Buffer Definitions
+### **services/auth-service-nestjs/tsconfig.json**
+```json
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "outDir": "./dist",
+    "rootDir": "./src"
+  },
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "dist"]
+}
+```
 
-### **packages/protos/auth.proto**
+### **services/api-gateway/tsconfig.json**
+```json
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "outDir": "./dist",
+    "rootDir": "./src"
+  },
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "dist"]
+}
+```
+
+## Step 2: Update Docker Compose with MongoDB & Redis
+
+### **docker-compose.yml** (Updated)
+```yaml
+version: '3.8'
+
+services:
+  # PostgreSQL for Auth Service
+  postgres:
+    image: postgres:15-alpine
+    container_name: aether-postgres
+    environment:
+      POSTGRES_DB: aetherconnect
+      POSTGRES_USER: aether
+      POSTGRES_PASSWORD: secret123
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U aether -d aetherconnect"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - aether-network
+
+  # MongoDB for Message Service
+  mongodb:
+    image: mongo:7.0
+    container_name: aether-mongodb
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: aether
+      MONGO_INITDB_ROOT_PASSWORD: secret123
+      MONGO_INITDB_DATABASE: aetherconnect
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - aether-network
+
+  # Redis for Socket.io and Caching
+  redis:
+    image: redis:7-alpine
+    container_name: aether-redis
+    command: redis-server --appendonly yes --requirepass secret123
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - aether-network
+
+volumes:
+  postgres_data:
+  mongodb_data:
+  redis_data:
+
+networks:
+  aether-network:
+    driver: bridge
+    name: aetherconnect-network
+```
+
+## Step 3: Update Protobuf Definitions
+
+### **packages/protos/message.proto** (NEW)
 ```protobuf
 syntax = "proto3";
 
-package auth;
+package message;
 
-service AuthService {
-  rpc CreateUser(CreateUserRequest) returns (UserResponse);
-  rpc ValidateToken(ValidateTokenRequest) returns (ValidateTokenResponse);
-  rpc Login(LoginRequest) returns (AuthResponse);
-  rpc RefreshToken(RefreshTokenRequest) returns (AuthResponse);
-  rpc GetUserProfile(GetUserProfileRequest) returns (UserResponse);
-  rpc UpdateUserProfile(UpdateUserProfileRequest) returns (UserResponse);
+service MessageService {
+  rpc SendMessage(SendMessageRequest) returns (MessageResponse);
+  rpc GetMessageHistory(GetMessageHistoryRequest) returns (MessageHistoryResponse);
+  rpc GetRooms(GetRoomsRequest) returns (RoomsResponse);
+  rpc CreateRoom(CreateRoomRequest) returns (RoomResponse);
+  rpc JoinRoom(JoinRoomRequest) returns (RoomResponse);
   rpc HealthCheck(HealthCheckRequest) returns (HealthCheckResponse);
 }
 
-message CreateUserRequest {
-  string username = 1;
-  string email = 2;
-  string password = 3;
-  string firstName = 4;
-  string lastName = 5;
-  repeated string roles = 6;
+message SendMessageRequest {
+  string userId = 1;
+  string roomId = 2;
+  string content = 3;
+  string messageType = 4; // text, image, file
+  optional string metadata = 5;
 }
 
-message LoginRequest {
-  string email = 1;
-  string password = 2;
+message GetMessageHistoryRequest {
+  string roomId = 1;
+  string userId = 2;
+  int32 page = 3;
+  int32 limit = 4;
 }
 
-message ValidateTokenRequest {
-  string token = 1;
-}
-
-message RefreshTokenRequest {
-  string refreshToken = 1;
-}
-
-message GetUserProfileRequest {
+message GetRoomsRequest {
   string userId = 1;
 }
 
-message UpdateUserProfileRequest {
+message CreateRoomRequest {
+  string name = 1;
+  string description = 2;
+  string createdBy = 3;
+  string roomType = 4; // public, private, direct
+}
+
+message JoinRoomRequest {
   string userId = 1;
-  optional string firstName = 2;
-  optional string lastName = 3;
-  optional string username = 4;
+  string roomId = 2;
 }
 
 message HealthCheckRequest {}
 
-message UserResponse {
+message MessageResponse {
   bool success = 1;
   string message = 2;
-  optional UserData user = 3;
+  optional MessageData messageData = 3;
   optional string error = 4;
 }
 
-message ValidateTokenResponse {
+message MessageHistoryResponse {
   bool success = 1;
   string message = 2;
-  optional UserData user = 3;
-  bool isValid = 4;
+  repeated MessageData messages = 3;
+  optional PaginationInfo pagination = 4;
   optional string error = 5;
 }
 
-message AuthResponse {
+message RoomsResponse {
   bool success = 1;
   string message = 2;
-  optional UserData user = 3;
-  optional string accessToken = 4;
-  optional string refreshToken = 5;
-  optional string error = 6;
+  repeated RoomData rooms = 3;
+  optional string error = 4;
+}
+
+message RoomResponse {
+  bool success = 1;
+  string message = 2;
+  optional RoomData room = 3;
+  optional string error = 4;
 }
 
 message HealthCheckResponse {
@@ -127,40 +274,30 @@ message HealthCheckResponse {
   string timestamp = 5;
 }
 
-message UserData {
+message MessageData {
   string id = 1;
-  string username = 2;
-  string email = 3;
-  string firstName = 4;
-  string lastName = 5;
-  repeated string roles = 6;
+  string userId = 2;
+  string username = 3;
+  string roomId = 4;
+  string content = 5;
+  string messageType = 6;
+  optional string metadata = 7;
+  string createdAt = 8;
+  string updatedAt = 9;
+}
+
+message RoomData {
+  string id = 1;
+  string name = 2;
+  string description = 3;
+  string roomType = 4;
+  string createdBy = 5;
+  repeated string members = 6;
   string createdAt = 7;
   string updatedAt = 8;
 }
-```
 
-### **packages/protos/common.proto**
-```protobuf
-syntax = "proto3";
-
-package common;
-
-message Empty {}
-
-message Error {
-  string code = 1;
-  string message = 2;
-  repeated string details = 3;
-}
-
-message PaginationRequest {
-  int32 page = 1;
-  int32 limit = 2;
-  string sortBy = 3;
-  string sortOrder = 4;
-}
-
-message PaginationResponse {
+message PaginationInfo {
   int32 currentPage = 1;
   int32 totalPages = 2;
   int32 totalItems = 3;
@@ -170,861 +307,12 @@ message PaginationResponse {
 }
 ```
 
-## Step 3: Enhanced Shared Package
+## Step 4: Message Service Implementation
 
-### **packages/shared/package.json**
+### **services/message-service/package.json**
 ```json
 {
-  "name": "@aether/shared",
-  "version": "1.0.0",
-  "main": "dist/index.js",
-  "types": "dist/index.d.ts",
-  "files": ["dist"],
-  "scripts": {
-    "build": "tsc",
-    "dev": "tsc --watch",
-    "clean": "rm -rf dist",
-    "test": "jest",
-    "lint": "eslint src/**/*.ts --fix"
-  },
-  "dependencies": {
-    "@grpc/grpc-js": "^1.9.7",
-    "@grpc/proto-loader": "^0.7.10",
-    "zod": "^3.22.4",
-    "winston": "^3.11.0",
-    "class-validator": "^0.14.0",
-    "class-transformer": "^0.5.1",
-    "rxjs": "^7.8.1"
-  },
-  "devDependencies": {
-    "typescript": "^5.2.2",
-    "@types/node": "^20.8.0",
-    "jest": "^29.7.0",
-    "@types/jest": "^29.5.5",
-    "eslint": "^8.50.0",
-    "@typescript-eslint/eslint-plugin": "^6.7.0",
-    "@typescript-eslint/parser": "^6.7.0"
-  }
-}
-```
-
-### **packages/shared/src/grpc/auth-client.ts**
-```typescript
-import * as grpc from '@grpc/grpc-js';
-import * as protoLoader from '@grpc/proto-loader';
-import { join } from 'path';
-import { logger } from '../utils/logger';
-
-const PROTO_PATH = join(__dirname, '../../../protos/auth.proto');
-
-export interface AuthServiceClient {
-  CreateUser(request: any): Promise<any>;
-  ValidateToken(request: any): Promise<any>;
-  Login(request: any): Promise<any>;
-  RefreshToken(request: any): Promise<any>;
-  GetUserProfile(request: any): Promise<any>;
-  UpdateUserProfile(request: any): Promise<any>;
-  HealthCheck(request: any): Promise<any>;
-}
-
-export class AuthGrpcClient implements AuthServiceClient {
-  private client: any;
-  private readonly serviceName = 'AuthService';
-
-  constructor(address: string = 'localhost:50001') {
-    try {
-      const packageDefinition = protoLoader.loadSync(PROTO_PATH, {
-        keepCase: true,
-        longs: String,
-        enums: String,
-        defaults: true,
-        oneofs: true,
-      });
-
-      const authProto = grpc.loadPackageDefinition(packageDefinition) as any;
-      
-      this.client = new authProto.auth.AuthService(
-        address,
-        grpc.credentials.createInsecure(),
-        {
-          'grpc.keepalive_time_ms': 30000,
-          'grpc.keepalive_timeout_ms': 5000,
-          'grpc.keepalive_permit_without_calls': true,
-          'grpc.http2.max_pings_without_data': 0,
-          'grpc.http2.min_time_between_pings_ms': 10000,
-          'grpc.http2.min_ping_interval_without_data_ms': 300000,
-        }
-      );
-
-      logger.info(`gRPC client connected to ${this.serviceName} at ${address}`);
-    } catch (error) {
-      logger.error(`Failed to initialize gRPC client for ${this.serviceName}:`, error);
-      throw error;
-    }
-  }
-
-  private promisifyCall(method: string, request: any): Promise<any> {
-    return new Promise((resolve, reject) => {
-      this.client[method](request, (error: any, response: any) => {
-        if (error) {
-          logger.error(`gRPC ${method} error:`, error);
-          reject(error);
-        } else {
-          logger.debug(`gRPC ${method} success:`, { request, response });
-          resolve(response);
-        }
-      });
-    });
-  }
-
-  async CreateUser(request: any): Promise<any> {
-    return this.promisifyCall('CreateUser', request);
-  }
-
-  async ValidateToken(request: any): Promise<any> {
-    return this.promisifyCall('ValidateToken', request);
-  }
-
-  async Login(request: any): Promise<any> {
-    return this.promisifyCall('Login', request);
-  }
-
-  async RefreshToken(request: any): Promise<any> {
-    return this.promisifyCall('RefreshToken', request);
-  }
-
-  async GetUserProfile(request: any): Promise<any> {
-    return this.promisifyCall('GetUserProfile', request);
-  }
-
-  async UpdateUserProfile(request: any): Promise<any> {
-    return this.promisifyCall('UpdateUserProfile', request);
-  }
-
-  async HealthCheck(request: any = {}): Promise<any> {
-    return this.promisifyCall('HealthCheck', request);
-  }
-}
-```
-
-### **packages/shared/src/utils/logger.ts**
-```typescript
-import winston from 'winston';
-
-const logLevel = process.env.LOG_LEVEL || 'info';
-const nodeEnv = process.env.NODE_ENV || 'development';
-
-const logFormat = winston.format.combine(
-  winston.format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
-  winston.format.errors({ stack: true }),
-  winston.format.json(),
-  winston.format.printf(({ level, message, timestamp, stack, service, requestId, userId, ...meta }) => {
-    const logObject = {
-      timestamp,
-      level: level.toUpperCase(),
-      service: service || 'unknown',
-      message,
-      ...(requestId && { requestId }),
-      ...(userId && { userId }),
-      ...(Object.keys(meta).length > 0 && { meta }),
-      ...(stack && { stack }),
-    };
-    return JSON.stringify(logObject);
-  })
-);
-
-export const logger = winston.createLogger({
-  level: logLevel,
-  format: logFormat,
-  defaultMeta: { service: 'aetherconnect' },
-  transports: [
-    new winston.transports.Console({
-      format: nodeEnv === 'development' 
-        ? winston.format.combine(
-            winston.format.colorize(),
-            winston.format.simple()
-          )
-        : logFormat
-    }),
-  ],
-});
-
-export const createServiceLogger = (serviceName: string) => {
-  return logger.child({ service: serviceName });
-};
-```
-
-### **packages/shared/src/index.ts**
-```typescript
-// gRPC clients
-export * from './grpc/auth-client';
-
-// DTOs and types
-export * from './dtos/user.dto';
-export * from './types/common.types';
-
-// Utilities
-export * from './utils/logger';
-
-// Constants
-export * from './constants/errors';
-```
-
-***
-
-# Day 8: NestJS Auth Service Implementation
-
-## Step 4: NestJS Auth Service Setup
-
-### **services/auth-service-nestjs/package.json**
-```json
-{
-  "name": "@aether/auth-service-nestjs",
-  "version": "1.0.0",
-  "main": "dist/main.js",
-  "scripts": {
-    "build": "nest build",
-    "dev": "nest start --watch",
-    "start": "node dist/main",
-    "start:debug": "nest start --debug --watch",
-    "test": "jest",
-    "test:watch": "jest --watch",
-    "lint": "eslint \"{src,apps,libs,test}/**/*.ts\" --fix",
-    "clean": "rm -rf dist"
-  },
-  "dependencies": {
-    "@nestjs/common": "^10.2.7",
-    "@nestjs/core": "^10.2.7",
-    "@nestjs/microservices": "^10.2.7",
-    "@nestjs/typeorm": "^10.0.0",
-    "@nestjs/jwt": "^10.1.1",
-    "@nestjs/config": "^3.1.1",
-    "typeorm": "^0.3.17",
-    "pg": "^8.11.3",
-    "bcryptjs": "^2.4.3",
-    "class-validator": "^0.14.0",
-    "class-transformer": "^0.5.1",
-    "reflect-metadata": "^0.1.13",
-    "rxjs": "^7.8.1",
-    "@grpc/grpc-js": "^1.9.7",
-    "@grpc/proto-loader": "^0.7.10",
-    "@aether/shared": "workspace:*",
-    "uuid": "^9.0.1"
-  },
-  "devDependencies": {
-    "@nestjs/cli": "^10.1.18",
-    "@nestjs/schematics": "^10.0.2",
-    "@nestjs/testing": "^10.2.7",
-    "typescript": "^5.2.2",
-    "@types/node": "^20.8.0",
-    "@types/bcryptjs": "^2.4.4",
-    "@types/uuid": "^9.0.5",
-    "jest": "^29.7.0",
-    "@types/jest": "^29.5.5",
-    "ts-jest": "^29.1.1",
-    "eslint": "^8.50.0",
-    "source-map-support": "^0.5.21"
-  }
-}
-```
-
-### **services/auth-service-nestjs/nest-cli.json**
-```json
-{
-  "collection": "@nestjs/schematics",
-  "sourceRoot": "src",
-  "compilerOptions": {
-    "deleteOutDir": true
-  }
-}
-```
-
-### **services/auth-service-nestjs/src/main.ts**
-```typescript
-import { NestFactory } from '@nestjs/core';
-import { MicroserviceOptions, Transport } from '@nestjs/microservices';
-import { join } from 'path';
-import { AppModule } from './app.module';
-import { createServiceLogger } from '@aether/shared';
-
-const logger = createServiceLogger('auth-service');
-
-async function bootstrap() {
-  try {
-    const app = await NestFactory.createMicroservice<MicroserviceOptions>(AppModule, {
-      transport: Transport.GRPC,
-      options: {
-        package: 'auth',
-        protoPath: join(__dirname, '../../../packages/protos/auth.proto'),
-        url: `0.0.0.0:${process.env.AUTH_SERVICE_GRPC_PORT || 50001}`,
-        loader: {
-          keepCase: true,
-          longs: String,
-          enums: String,
-          defaults: true,
-          oneofs: true,
-        },
-      },
-    });
-
-    await app.listen();
-    
-    const port = process.env.AUTH_SERVICE_GRPC_PORT || 50001;
-    logger.info(`🔐 Auth Service (gRPC) is listening on port ${port}`);
-    logger.info(`📋 Proto path: ${join(__dirname, '../../../packages/protos/auth.proto')}`);
-    
-    // Graceful shutdown
-    process.on('SIGTERM', async () => {
-      logger.info('SIGTERM received, shutting down gracefully');
-      await app.close();
-      process.exit(0);
-    });
-
-  } catch (error) {
-    logger.error('Failed to start Auth Service:', error);
-    process.exit(1);
-  }
-}
-
-bootstrap();
-```
-
-### **services/auth-service-nestjs/src/app.module.ts**
-```typescript
-import { Module } from '@nestjs/common';
-import { ConfigModule } from '@nestjs/config';
-import { TypeOrmModule } from '@nestjs/typeorm';
-import { JwtModule } from '@nestjs/jwt';
-import { AuthModule } from './auth/auth.module';
-import { UsersModule } from './users/users.module';
-import { DatabaseModule } from './database/database.module';
-
-@Module({
-  imports: [
-    ConfigModule.forRoot({
-      isGlobal: true,
-      envFilePath: '../../../.env',
-    }),
-    DatabaseModule,
-    JwtModule.register({
-      global: true,
-      secret: process.env.JWT_SECRET || 'your-secret-key',
-      signOptions: { expiresIn: '15m' },
-    }),
-    AuthModule,
-    UsersModule,
-  ],
-})
-export class AppModule {}
-```
-
-### **services/auth-service-nestjs/src/database/database.module.ts**
-```typescript
-import { Module } from '@nestjs/common';
-import { TypeOrmModule } from '@nestjs/typeorm';
-import { User } from '../users/entities/user.entity';
-
-@Module({
-  imports: [
-    TypeOrmModule.forRoot({
-      type: 'postgres',
-      url: process.env.POSTGRES_URL || 'postgresql://aether:secret123@localhost:5432/aetherconnect',
-      entities: [User],
-      synchronize: process.env.NODE_ENV !== 'production', // Only for development!
-      logging: process.env.NODE_ENV === 'development',
-      ssl: false,
-    }),
-  ],
-})
-export class DatabaseModule {}
-```
-
-### **services/auth-service-nestjs/src/users/entities/user.entity.ts**
-```typescript
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn } from 'typeorm';
-
-@Entity('users')
-export class User {
-  @PrimaryGeneratedColumn()
-  id: number;
-
-  @Column({ unique: true, length: 50 })
-  username: string;
-
-  @Column({ unique: true, length: 255 })
-  email: string;
-
-  @Column({ name: 'password_hash', length: 255 })
-  passwordHash: string;
-
-  @Column({ name: 'first_name', length: 50 })
-  firstName: string;
-
-  @Column({ name: 'last_name', length: 50 })
-  lastName: string;
-
-  @Column('simple-array', { default: 'user' })
-  roles: string[];
-
-  @Column({ name: 'refresh_token_hash', length: 255, nullable: true })
-  refreshTokenHash: string;
-
-  @Column({ name: 'refresh_token_expires_at', type: 'timestamp', nullable: true })
-  refreshTokenExpiresAt: Date;
-
-  @CreateDateColumn({ name: 'created_at' })
-  createdAt: Date;
-
-  @UpdateDateColumn({ name: 'updated_at' })
-  updatedAt: Date;
-}
-```
-
-### **services/auth-service-nestjs/src/auth/auth.controller.ts**
-```typescript
-import { Controller } from '@nestjs/common';
-import { GrpcMethod } from '@nestjs/microservices';
-import { AuthService } from './auth.service';
-import { createServiceLogger } from '@aether/shared';
-
-const logger = createServiceLogger('auth-controller');
-
-@Controller()
-export class AuthController {
-  constructor(private readonly authService: AuthService) {}
-
-  @GrpcMethod('AuthService', 'CreateUser')
-  async createUser(data: any) {
-    try {
-      logger.info('CreateUser gRPC call received', { email: data.email, username: data.username });
-      const result = await this.authService.createUser(data);
-      logger.info('CreateUser completed successfully', { userId: result.user?.id });
-      return result;
-    } catch (error) {
-      logger.error('CreateUser failed:', error);
-      return {
-        success: false,
-        message: 'User creation failed',
-        error: error.message,
-      };
-    }
-  }
-
-  @GrpcMethod('AuthService', 'Login')
-  async login(data: any) {
-    try {
-      logger.info('Login gRPC call received', { email: data.email });
-      const result = await this.authService.login(data);
-      logger.info('Login completed', { success: result.success, userId: result.user?.id });
-      return result;
-    } catch (error) {
-      logger.error('Login failed:', error);
-      return {
-        success: false,
-        message: 'Login failed',
-        error: error.message,
-      };
-    }
-  }
-
-  @GrpcMethod('AuthService', 'ValidateToken')
-  async validateToken(data: any) {
-    try {
-      logger.debug('ValidateToken gRPC call received');
-      const result = await this.authService.validateToken(data.token);
-      logger.debug('ValidateToken completed', { isValid: result.isValid });
-      return result;
-    } catch (error) {
-      logger.error('ValidateToken failed:', error);
-      return {
-        success: false,
-        message: 'Token validation failed',
-        isValid: false,
-        error: error.message,
-      };
-    }
-  }
-
-  @GrpcMethod('AuthService', 'RefreshToken')
-  async refreshToken(data: any) {
-    try {
-      logger.info('RefreshToken gRPC call received');
-      const result = await this.authService.refreshToken(data.refreshToken);
-      logger.info('RefreshToken completed', { success: result.success });
-      return result;
-    } catch (error) {
-      logger.error('RefreshToken failed:', error);
-      return {
-        success: false,
-        message: 'Token refresh failed',
-        error: error.message,
-      };
-    }
-  }
-
-  @GrpcMethod('AuthService', 'GetUserProfile')
-  async getUserProfile(data: any) {
-    try {
-      logger.info('GetUserProfile gRPC call received', { userId: data.userId });
-      const result = await this.authService.getUserProfile(data.userId);
-      logger.info('GetUserProfile completed', { success: result.success });
-      return result;
-    } catch (error) {
-      logger.error('GetUserProfile failed:', error);
-      return {
-        success: false,
-        message: 'Failed to get user profile',
-        error: error.message,
-      };
-    }
-  }
-
-  @GrpcMethod('AuthService', 'UpdateUserProfile')
-  async updateUserProfile(data: any) {
-    try {
-      logger.info('UpdateUserProfile gRPC call received', { userId: data.userId });
-      const result = await this.authService.updateUserProfile(data);
-      logger.info('UpdateUserProfile completed', { success: result.success });
-      return result;
-    } catch (error) {
-      logger.error('UpdateUserProfile failed:', error);
-      return {
-        success: false,
-        message: 'Failed to update user profile',
-        error: error.message,
-      };
-    }
-  }
-
-  @GrpcMethod('AuthService', 'HealthCheck')
-  async healthCheck() {
-    return {
-      success: true,
-      message: 'Auth Service is healthy',
-      service: 'auth-service',
-      version: '1.0.0',
-      timestamp: new Date().toISOString(),
-    };
-  }
-}
-```
-
-### **services/auth-service-nestjs/src/auth/auth.service.ts**
-```typescript
-import { Injectable } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { JwtService } from '@nestjs/jwt';
-import * as bcrypt from 'bcryptjs';
-import { User } from '../users/entities/user.entity';
-import { createServiceLogger } from '@aether/shared';
-
-const logger = createServiceLogger('auth-service');
-
-@Injectable()
-export class AuthService {
-  constructor(
-    @InjectRepository(User)
-    private readonly userRepository: Repository<User>,
-    private readonly jwtService: JwtService,
-  ) {}
-
-  async createUser(data: any) {
-    try {
-      // Check if user already exists
-      const existingUser = await this.userRepository.findOne({
-        where: [{ email: data.email }, { username: data.username }],
-      });
-
-      if (existingUser) {
-        return {
-          success: false,
-          message: 'User with this email or username already exists',
-        };
-      }
-
-      // Hash password
-      const passwordHash = await bcrypt.hash(data.password, 12);
-
-      // Create user
-      const user = this.userRepository.create({
-        username: data.username,
-        email: data.email,
-        passwordHash,
-        firstName: data.firstName,
-        lastName: data.lastName,
-        roles: data.roles || ['user'],
-      });
-
-      const savedUser = await this.userRepository.save(user);
-
-      // Generate tokens
-      const { accessToken, refreshToken } = await this.generateTokens(savedUser);
-
-      // Save refresh token
-      await this.saveRefreshToken(savedUser.id, refreshToken);
-
-      return {
-        success: true,
-        message: 'User created successfully',
-        user: this.formatUserData(savedUser),
-        accessToken,
-        refreshToken,
-      };
-    } catch (error) {
-      logger.error('User creation failed:', error);
-      throw error;
-    }
-  }
-
-  async login(data: any) {
-    try {
-      const user = await this.userRepository.findOne({
-        where: { email: data.email },
-      });
-
-      if (!user) {
-        return {
-          success: false,
-          message: 'Invalid credentials',
-        };
-      }
-
-      const isPasswordValid = await bcrypt.compare(data.password, user.passwordHash);
-      if (!isPasswordValid) {
-        return {
-          success: false,
-          message: 'Invalid credentials',
-        };
-      }
-
-      // Generate tokens
-      const { accessToken, refreshToken } = await this.generateTokens(user);
-
-      // Save refresh token
-      await this.saveRefreshToken(user.id, refreshToken);
-
-      return {
-        success: true,
-        message: 'Login successful',
-        user: this.formatUserData(user),
-        accessToken,
-        refreshToken,
-      };
-    } catch (error) {
-      logger.error('Login failed:', error);
-      throw error;
-    }
-  }
-
-  async validateToken(token: string) {
-    try {
-      const decoded = this.jwtService.verify(token, {
-        secret: process.env.JWT_SECRET || 'your-secret-key',
-      });
-
-      const user = await this.userRepository.findOne({
-        where: { id: decoded.userId },
-      });
-
-      if (!user) {
-        return {
-          success: false,
-          message: 'User not found',
-          isValid: false,
-        };
-      }
-
-      return {
-        success: true,
-        message: 'Token is valid',
-        isValid: true,
-        user: this.formatUserData(user),
-      };
-    } catch (error) {
-      return {
-        success: false,
-        message: 'Invalid token',
-        isValid: false,
-      };
-    }
-  }
-
-  async refreshToken(refreshToken: string) {
-    try {
-      const decoded = this.jwtService.verify(refreshToken, {
-        secret: process.env.JWT_REFRESH_SECRET || 'your-refresh-secret',
-      });
-
-      const user = await this.userRepository.findOne({
-        where: { 
-          id: decoded.userId,
-        },
-      });
-
-      if (!user || !user.refreshTokenHash || user.refreshTokenExpiresAt < new Date()) {
-        return {
-          success: false,
-          message: 'Invalid refresh token',
-        };
-      }
-
-      const isValidRefresh = await bcrypt.compare(refreshToken, user.refreshTokenHash);
-      if (!isValidRefresh) {
-        return {
-          success: false,
-          message: 'Invalid refresh token',
-        };
-      }
-
-      // Generate new access token
-      const accessToken = this.jwtService.sign(
-        { userId: user.id, email: user.email },
-        { 
-          secret: process.env.JWT_SECRET || 'your-secret-key',
-          expiresIn: '15m' 
-        }
-      );
-
-      return {
-        success: true,
-        message: 'Token refreshed successfully',
-        accessToken,
-      };
-    } catch (error) {
-      return {
-        success: false,
-        message: 'Token refresh failed',
-      };
-    }
-  }
-
-  async getUserProfile(userId: string) {
-    try {
-      const user = await this.userRepository.findOne({
-        where: { id: parseInt(userId) },
-      });
-
-      if (!user) {
-        return {
-          success: false,
-          message: 'User not found',
-        };
-      }
-
-      return {
-        success: true,
-        message: 'User profile retrieved successfully',
-        user: this.formatUserData(user),
-      };
-    } catch (error) {
-      logger.error('Get user profile failed:', error);
-      throw error;
-    }
-  }
-
-  async updateUserProfile(data: any) {
-    try {
-      const user = await this.userRepository.findOne({
-        where: { id: parseInt(data.userId) },
-      });
-
-      if (!user) {
-        return {
-          success: false,
-          message: 'User not found',
-        };
-      }
-
-      // Update fields if provided
-      if (data.firstName) user.firstName = data.firstName;
-      if (data.lastName) user.lastName = data.lastName;
-      if (data.username) user.username = data.username;
-
-      const updatedUser = await this.userRepository.save(user);
-
-      return {
-        success: true,
-        message: 'User profile updated successfully',
-        user: this.formatUserData(updatedUser),
-      };
-    } catch (error) {
-      logger.error('Update user profile failed:', error);
-      throw error;
-    }
-  }
-
-  private async generateTokens(user: User) {
-    const payload = { userId: user.id, email: user.email };
-
-    const accessToken = this.jwtService.sign(payload, {
-      secret: process.env.JWT_SECRET || 'your-secret-key',
-      expiresIn: '15m',
-    });
-
-    const refreshToken = this.jwtService.sign(
-      { ...payload, type: 'refresh' },
-      {
-        secret: process.env.JWT_REFRESH_SECRET || 'your-refresh-secret',
-        expiresIn: '7d',
-      }
-    );
-
-    return { accessToken, refreshToken };
-  }
-
-  private async saveRefreshToken(userId: number, refreshToken: string) {
-    const refreshTokenHash = await bcrypt.hash(refreshToken, 12);
-    const refreshTokenExpiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
-
-    await this.userRepository.update(userId, {
-      refreshTokenHash,
-      refreshTokenExpiresAt,
-    });
-  }
-
-  private formatUserData(user: User) {
-    return {
-      id: user.id.toString(),
-      username: user.username,
-      email: user.email,
-      firstName: user.firstName,
-      lastName: user.lastName,
-      roles: user.roles,
-      createdAt: user.createdAt.toISOString(),
-      updatedAt: user.updatedAt.toISOString(),
-    };
-  }
-}
-```
-
-### **services/auth-service-nestjs/src/auth/auth.module.ts**
-```typescript
-import { Module } from '@nestjs/common';
-import { TypeOrmModule } from '@nestjs/typeorm';
-import { AuthController } from './auth.controller';
-import { AuthService } from './auth.service';
-import { User } from '../users/entities/user.entity';
-
-@Module({
-  imports: [TypeOrmModule.forFeature([User])],
-  controllers: [AuthController],
-  providers: [AuthService],
-  exports: [AuthService],
-})
-export class AuthModule {}
-```
-
-***
-
-# Day 9: API Gateway Implementation
-
-## Step 5: NestJS API Gateway
-
-### **services/api-gateway/package.json**
-```json
-{
-  "name": "@aether/api-gateway",
+  "name": "@aether/message-service",
   "version": "1.0.0",
   "main": "dist/main.js",
   "scripts": {
@@ -1037,91 +325,118 @@ export class AuthModule {}
   "dependencies": {
     "@nestjs/common": "^10.2.7",
     "@nestjs/core": "^10.2.7",
-    "@nestjs/platform-express": "^10.2.7",
     "@nestjs/microservices": "^10.2.7",
-    "@nestjs/swagger": "^7.1.14",
+    "@nestjs/platform-socket.io": "^10.2.7",
+    "@nestjs/websockets": "^10.2.7",
+    "@nestjs/mongoose": "^10.0.2",
     "@nestjs/config": "^3.1.1",
+    "mongoose": "^7.6.3",
+    "socket.io": "^4.7.4",
+    "socket.io-redis": "^6.1.1",
+    "ioredis": "^5.3.2",
     "class-validator": "^0.14.0",
     "class-transformer": "^0.5.1",
-    "helmet": "^7.1.0",
-    "express-rate-limit": "^7.1.3",
     "reflect-metadata": "^0.1.13",
     "rxjs": "^7.8.1",
     "@grpc/grpc-js": "^1.9.7",
     "@grpc/proto-loader": "^0.7.10",
-    "@aether/shared": "workspace:*"
+    "@aether/shared": "workspace:*",
+    "uuid": "^9.0.1"
   },
   "devDependencies": {
     "@nestjs/cli": "^10.1.18",
     "@nestjs/testing": "^10.2.7",
     "typescript": "^5.2.2",
     "@types/node": "^20.8.0",
+    "@types/uuid": "^9.0.5",
     "jest": "^29.7.0"
   }
 }
 ```
 
-### **services/api-gateway/src/main.ts**
+### **services/message-service/tsconfig.json**
+```json
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "outDir": "./dist",
+    "rootDir": "./src"
+  },
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "dist"]
+}
+```
+
+### **services/message-service/nest-cli.json**
+```json
+{
+  "collection": "@nestjs/schematics",
+  "sourceRoot": "src",
+  "compilerOptions": {
+    "deleteOutDir": true
+  }
+}
+```
+
+### **services/message-service/src/main.ts**
 ```typescript
 import { NestFactory } from '@nestjs/core';
-import { ValidationPipe } from '@nestjs/common';
-import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
-import helmet from 'helmet';
-import rateLimit from 'express-rate-limit';
+import { MicroserviceOptions, Transport } from '@nestjs/microservices';
+import { join } from 'path';
 import { AppModule } from './app.module';
 import { createServiceLogger } from '@aether/shared';
 
-const logger = createServiceLogger('api-gateway');
+const logger = createServiceLogger('message-service');
 
 async function bootstrap() {
   try {
-    const app = await NestFactory.create(AppModule);
+    // Create gRPC microservice
+    const grpcApp = await NestFactory.createMicroservice<MicroserviceOptions>(AppModule, {
+      transport: Transport.GRPC,
+      options: {
+        package: 'message',
+        protoPath: join(__dirname, '../../../packages/protos/message.proto'),
+        url: `0.0.0.0:${process.env.MESSAGE_SERVICE_GRPC_PORT || 50002}`,
+        loader: {
+          keepCase: true,
+          longs: String,
+          enums: String,
+          defaults: true,
+          oneofs: true,
+        },
+      },
+    });
 
-    // Security middleware
-    app.use(helmet());
-
-    // Rate limiting
-    app.use(
-      rateLimit({
-        windowMs: 15 * 60 * 1000, // 15 minutes
-        max: 100, // limit each IP to 100 requests per windowMs
-        message: 'Too many requests from this IP, please try again later.',
-      }),
-    );
-
-    // CORS
-    app.enableCors({
+    // Create HTTP app for Socket.io
+    const httpApp = await NestFactory.create(AppModule);
+    
+    // Enable CORS for Socket.io
+    httpApp.enableCors({
       origin: process.env.FRONTEND_URL || 'http://localhost:3004',
       credentials: true,
     });
 
-    // Global validation pipe
-    app.useGlobalPipes(new ValidationPipe({
-      transform: true,
-      whitelist: true,
-      forbidNonWhitelisted: true,
-    }));
+    // Start both services
+    await Promise.all([
+      grpcApp.listen(),
+      httpApp.listen(process.env.MESSAGE_SERVICE_HTTP_PORT || 3002)
+    ]);
 
-    // Swagger documentation
-    const config = new DocumentBuilder()
-      .setTitle('AetherConnect API')
-      .setDescription('Enterprise-grade chat application API')
-      .setVersion('1.0')
-      .addBearerAuth()
-      .build();
+    const grpcPort = process.env.MESSAGE_SERVICE_GRPC_PORT || 50002;
+    const httpPort = process.env.MESSAGE_SERVICE_HTTP_PORT || 3002;
     
-    const document = SwaggerModule.createDocument(app, config);
-    SwaggerModule.setup('api/docs', app, document);
+    logger.info(`💬 Message Service (gRPC) is listening on port ${grpcPort}`);
+    logger.info(`🌐 Message Service (Socket.io) is listening on port ${httpPort}`);
 
-    const port = process.env.API_GATEWAY_PORT || 3000;
-    await app.listen(port);
-
-    logger.info(`🚀 API Gateway is running on http://localhost:${port}`);
-    logger.info(`📚 Swagger docs available at http://localhost:${port}/api/docs`);
-    logger.info(`🔗 Health check: http://localhost:${port}/api/health`);
+    // Graceful shutdown
+    process.on('SIGTERM', async () => {
+      logger.info('SIGTERM received, shutting down gracefully');
+      await Promise.all([grpcApp.close(), httpApp.close()]);
+      process.exit(0);
+    });
 
   } catch (error) {
-    logger.error('Failed to start API Gateway:', error);
+    logger.error('Failed to start Message Service:', error);
     process.exit(1);
   }
 }
@@ -1129,12 +444,14 @@ async function bootstrap() {
 bootstrap();
 ```
 
-### **services/api-gateway/src/app.module.ts**
+### **services/message-service/src/app.module.ts**
 ```typescript
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
-import { AuthModule } from './auth/auth.module';
-import { HealthModule } from './health/health.module';
+import { MongooseModule } from '@nestjs/mongoose';
+import { MessageModule } from './message/message.module';
+import { SocketModule } from './socket/socket.module';
+import { DatabaseModule } from './database/database.module';
 
 @Module({
   imports: [
@@ -1142,397 +459,825 @@ import { HealthModule } from './health/health.module';
       isGlobal: true,
       envFilePath: '../../../.env',
     }),
-    AuthModule,
-    HealthModule,
+    DatabaseModule,
+    MessageModule,
+    SocketModule,
   ],
 })
 export class AppModule {}
 ```
 
-### **services/api-gateway/src/auth/auth.controller.ts**
+### **services/message-service/src/database/database.module.ts**
 ```typescript
-import { Controller, Post, Get, Put, Body, UseGuards, Request } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
-import { AuthService } from './auth.service';
-import { JwtAuthGuard } from './guards/jwt-auth.guard';
-import { CreateUserDto, LoginDto, UpdateUserDto } from './dto/auth.dto';
-import { createServiceLogger } from '@aether/shared';
+import { Module } from '@nestjs/common';
+import { MongooseModule } from '@nestjs/mongoose';
 
-const logger = createServiceLogger('auth-controller-gateway');
-
-@ApiTags('Authentication')
-@Controller('api/auth')
-export class AuthController {
-  constructor(private readonly authService: AuthService) {}
-
-  @Post('register')
-  @ApiOperation({ summary: 'Register a new user' })
-  @ApiResponse({ status: 201, description: 'User created successfully' })
-  @ApiResponse({ status: 400, description: 'Invalid input data' })
-  async register(@Body() createUserDto: CreateUserDto) {
-    logger.info('Register request received', { email: createUserDto.email });
-    const result = await this.authService.register(createUserDto);
-    logger.info('Register request completed', { success: result.success });
-    return result;
-  }
-
-  @Post('login')
-  @ApiOperation({ summary: 'Login user' })
-  @ApiResponse({ status: 200, description: 'Login successful' })
-  @ApiResponse({ status: 401, description: 'Invalid credentials' })
-  async login(@Body() loginDto: LoginDto) {
-    logger.info('Login request received', { email: loginDto.email });
-    const result = await this.authService.login(loginDto);
-    logger.info('Login request completed', { success: result.success });
-    return result;
-  }
-
-  @Post('refresh')
-  @ApiOperation({ summary: 'Refresh access token' })
-  @ApiResponse({ status: 200, description: 'Token refreshed successfully' })
-  @ApiResponse({ status: 401, description: 'Invalid refresh token' })
-  async refreshToken(@Body() body: { refreshToken: string }) {
-    logger.info('Refresh token request received');
-    const result = await this.authService.refreshToken(body.refreshToken);
-    logger.info('Refresh token request completed', { success: result.success });
-    return result;
-  }
-
-  @Get('profile')
-  @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth()
-  @ApiOperation({ summary: 'Get user profile' })
-  @ApiResponse({ status: 200, description: 'Profile retrieved successfully' })
-  @ApiResponse({ status: 401, description: 'Unauthorized' })
-  async getProfile(@Request() req) {
-    logger.info('Get profile request received', { userId: req.user.userId });
-    const result = await this.authService.getUserProfile(req.user.userId);
-    logger.info('Get profile request completed', { success: result.success });
-    return result;
-  }
-
-  @Put('profile')
-  @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth()
-  @ApiOperation({ summary: 'Update user profile' })
-  @ApiResponse({ status: 200, description: 'Profile updated successfully' })
-  @ApiResponse({ status: 401, description: 'Unauthorized' })
-  async updateProfile(@Request() req, @Body() updateUserDto: UpdateUserDto) {
-    logger.info('Update profile request received', { userId: req.user.userId });
-    const result = await this.authService.updateUserProfile(req.user.userId, updateUserDto);
-    logger.info('Update profile request completed', { success: result.success });
-    return result;
-  }
-}
+@Module({
+  imports: [
+    MongooseModule.forRoot(
+      process.env.MONGODB_URL || 'mongodb://aether:secret123@localhost:27017/aetherconnect',
+      {
+        authSource: 'admin',
+      }
+    ),
+  ],
+})
+export class DatabaseModule {}
 ```
 
-### **services/api-gateway/src/auth/auth.service.ts**
+## Step 5: Message Schemas and Entities
+
+### **services/message-service/src/message/schemas/message.schema.ts**
 ```typescript
-import { Injectable, OnModuleInit } from '@nestjs/common';
-import { AuthGrpcClient } from '@aether/shared';
-import { CreateUserDto, LoginDto, UpdateUserDto } from './dto/auth.dto';
-import { createServiceLogger } from '@aether/shared';
+import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
+import { Document } from 'mongoose';
 
-const logger = createServiceLogger('auth-service-gateway');
+export type MessageDocument = Message & Document;
 
-@Injectable()
-export class AuthService implements OnModuleInit {
-  private authClient: AuthGrpcClient;
+@Schema({ timestamps: true })
+export class Message {
+  @Prop({ required: true })
+  userId: string;
 
-  onModuleInit() {
-    const authServiceUrl = process.env.AUTH_SERVICE_GRPC_URL || 'localhost:50001';
-    this.authClient = new AuthGrpcClient(authServiceUrl);
-    logger.info(`Connected to Auth Service at ${authServiceUrl}`);
-  }
-
-  async register(createUserDto: CreateUserDto) {
-    try {
-      return await this.authClient.CreateUser(createUserDto);
-    } catch (error) {
-      logger.error('Register gRPC call failed:', error);
-      return {
-        success: false,
-        message: 'Registration failed',
-        error: 'Internal server error',
-      };
-    }
-  }
-
-  async login(loginDto: LoginDto) {
-    try {
-      return await this.authClient.Login(loginDto);
-    } catch (error) {
-      logger.error('Login gRPC call failed:', error);
-      return {
-        success: false,
-        message: 'Login failed',
-        error: 'Internal server error',
-      };
-    }
-  }
-
-  async validateToken(token: string) {
-    try {
-      return await this.authClient.ValidateToken({ token });
-    } catch (error) {
-      logger.error('ValidateToken gRPC call failed:', error);
-      return {
-        success: false,
-        message: 'Token validation failed',
-        isValid: false,
-      };
-    }
-  }
-
-  async refreshToken(refreshToken: string) {
-    try {
-      return await this.authClient.RefreshToken({ refreshToken });
-    } catch (error) {
-      logger.error('RefreshToken gRPC call failed:', error);
-      return {
-        success: false,
-        message: 'Token refresh failed',
-        error: 'Internal server error',
-      };
-    }
-  }
-
-  async getUserProfile(userId: string) {
-    try {
-      return await this.authClient.GetUserProfile({ userId });
-    } catch (error) {
-      logger.error('GetUserProfile gRPC call failed:', error);
-      return {
-        success: false,
-        message: 'Failed to get user profile',
-        error: 'Internal server error',
-      };
-    }
-  }
-
-  async updateUserProfile(userId: string, updateUserDto: UpdateUserDto) {
-    try {
-      return await this.authClient.UpdateUserProfile({
-        userId,
-        ...updateUserDto,
-      });
-    } catch (error) {
-      logger.error('UpdateUserProfile gRPC call failed:', error);
-      return {
-        success: false,
-        message: 'Failed to update user profile',
-        error: 'Internal server error',
-      };
-    }
-  }
-}
-```
-
-### **services/api-gateway/src/auth/dto/auth.dto.ts**
-```typescript
-import { IsEmail, IsString, MinLength, IsOptional } from 'class-validator';
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-
-export class CreateUserDto {
-  @ApiProperty({ example: 'john_doe', description: 'Username (3-50 characters)' })
-  @IsString()
-  @MinLength(3)
+  @Prop({ required: true })
   username: string;
 
-  @ApiProperty({ example: 'john@example.com', description: 'User email address' })
-  @IsEmail()
-  email: string;
+  @Prop({ required: true })
+  roomId: string;
 
-  @ApiProperty({ example: 'securepass123', description: 'Password (minimum 8 characters)' })
-  @IsString()
-  @MinLength(8)
-  password: string;
+  @Prop({ required: true })
+  content: string;
 
-  @ApiProperty({ example: 'John', description: 'First name' })
-  @IsString()
-  firstName: string;
+  @Prop({ required: true, enum: ['text', 'image', 'file'], default: 'text' })
+  messageType: string;
 
-  @ApiProperty({ example: 'Doe', description: 'Last name' })
-  @IsString()
-  lastName: string;
+  @Prop({ type: Object, required: false })
+  metadata?: any;
+
+  @Prop({ default: Date.now })
+  createdAt: Date;
+
+  @Prop({ default: Date.now })
+  updatedAt: Date;
 }
 
-export class LoginDto {
-  @ApiProperty({ example: 'john@example.com', description: 'User email address' })
-  @IsEmail()
-  email: string;
+export const MessageSchema = SchemaFactory.createForClass(Message);
 
-  @ApiProperty({ example: 'securepass123', description: 'User password' })
-  @IsString()
-  password: string;
-}
-
-export class UpdateUserDto {
-  @ApiPropertyOptional({ example: 'John', description: 'First name' })
-  @IsOptional()
-  @IsString()
-  firstName?: string;
-
-  @ApiPropertyOptional({ example: 'Doe', description: 'Last name' })
-  @IsOptional()
-  @IsString()
-  lastName?: string;
-
-  @ApiPropertyOptional({ example: 'john_doe_updated', description: 'Username' })
-  @IsOptional()
-  @IsString()
-  @MinLength(3)
-  username?: string;
-}
+// Add indexes for better query performance
+MessageSchema.index({ roomId: 1, createdAt: -1 });
+MessageSchema.index({ userId: 1, createdAt: -1 });
 ```
 
-### **services/api-gateway/src/auth/guards/jwt-auth.guard.ts**
+### **services/message-service/src/message/schemas/room.schema.ts**
 ```typescript
-import { Injectable, CanActivate, ExecutionContext, UnauthorizedException } from '@nestjs/common';
-import { AuthService } from '../auth.service';
-import { createServiceLogger } from '@aether/shared';
+import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
+import { Document } from 'mongoose';
 
-const logger = createServiceLogger('jwt-auth-guard');
+export type RoomDocument = Room & Document;
+
+@Schema({ timestamps: true })
+export class Room {
+  @Prop({ required: true })
+  name: string;
+
+  @Prop()
+  description: string;
+
+  @Prop({ required: true, enum: ['public', 'private', 'direct'], default: 'public' })
+  roomType: string;
+
+  @Prop({ required: true })
+  createdBy: string;
+
+  @Prop({ type: [String], default: [] })
+  members: string[];
+
+  @Prop({ default: Date.now })
+  createdAt: Date;
+
+  @Prop({ default: Date.now })
+  updatedAt: Date;
+}
+
+export const RoomSchema = SchemaFactory.createForClass(Room);
+
+// Add indexes
+RoomSchema.index({ createdBy: 1 });
+RoomSchema.index({ members: 1 });
+RoomSchema.index({ roomType: 1 });
+```
+
+## Step 6: Socket.io Gateway
+
+### **services/message-service/src/socket/socket.gateway.ts**
+```typescript
+import {
+  WebSocketGateway,
+  SubscribeMessage,
+  MessageBody,
+  ConnectedSocket,
+  WebSocketServer,
+  OnGatewayConnection,
+  OnGatewayDisconnect,
+} from '@nestjs/websockets';
+import { Server, Socket } from 'socket.io';
+import { Injectable } from '@nestjs/common';
+import { AuthGrpcClient, createServiceLogger } from '@aether/shared';
+import { MessageService } from '../message/message.service';
+import Redis from 'ioredis';
+import { createAdapter } from 'socket.io-redis';
+
+const logger = createServiceLogger('socket-gateway');
 
 @Injectable()
-export class JwtAuthGuard implements CanActivate {
-  constructor(private readonly authService: AuthService) {}
+@WebSocketGateway({
+  cors: {
+    origin: process.env.FRONTEND_URL || 'http://localhost:3004',
+    credentials: true,
+  },
+})
+export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
+  @WebSocketServer()
+  server: Server;
 
-  async canActivate(context: ExecutionContext): Promise<boolean> {
-    const request = context.switchToHttp().getRequest();
-    
-    const authHeader = request.headers.authorization;
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      logger.warn('No authorization header or invalid format');
-      throw new UnauthorizedException('Access token required');
-    }
+  private authClient: AuthGrpcClient;
+  private connectedUsers = new Map<string, { userId: string; username: string; rooms: Set<string> }>();
 
-    const token = authHeader.substring(7);
+  constructor(private readonly messageService: MessageService) {
+    // Initialize Auth gRPC client
+    this.authClient = new AuthGrpcClient(process.env.AUTH_SERVICE_GRPC_URL || 'localhost:50001');
     
+    // Setup Redis adapter for Socket.io clustering
+    this.setupRedisAdapter();
+  }
+
+  private setupRedisAdapter() {
+    const redisUrl = process.env.REDIS_URL || 'redis://:secret123@localhost:6379';
+    const pubClient = new Redis(redisUrl);
+    const subClient = pubClient.duplicate();
+    
+    this.server?.adapter(createAdapter(pubClient, subClient));
+    logger.info('Redis adapter configured for Socket.io clustering');
+  }
+
+  async handleConnection(client: Socket) {
     try {
-      const result = await this.authService.validateToken(token);
+      logger.info('Client attempting to connect', { socketId: client.id });
       
-      if (!result.success || !result.isValid) {
-        logger.warn('Token validation failed');
-        throw new UnauthorizedException('Invalid token');
+      const token = client.handshake.auth?.token;
+      if (!token) {
+        logger.warn('Connection rejected: No token provided', { socketId: client.id });
+        client.emit('error', { message: 'Authentication required' });
+        client.disconnect();
+        return;
       }
 
-      request.user = {
-        userId: result.user.id,
-        email: result.user.email,
-        username: result.user.username,
+      // Validate token with Auth Service
+      const authResult = await this.authClient.ValidateToken({ token });
+      
+      if (!authResult.success || !authResult.isValid) {
+        logger.warn('Connection rejected: Invalid token', { socketId: client.id });
+        client.emit('error', { message: 'Invalid token' });
+        client.disconnect();
+        return;
+      }
+
+      // Store user connection info
+      this.connectedUsers.set(client.id, {
+        userId: authResult.user.id,
+        username: authResult.user.username,
+        rooms: new Set(),
+      });
+
+      client.emit('connected', {
+        message: 'Successfully connected',
+        user: {
+          id: authResult.user.id,
+          username: authResult.user.username,
+        },
+      });
+
+      logger.info('Client connected successfully', {
+        socketId: client.id,
+        userId: authResult.user.id,
+        username: authResult.user.username,
+      });
+
+    } catch (error) {
+      logger.error('Connection error:', error);
+      client.emit('error', { message: 'Connection failed' });
+      client.disconnect();
+    }
+  }
+
+  handleDisconnect(client: Socket) {
+    const userInfo = this.connectedUsers.get(client.id);
+    if (userInfo) {
+      // Leave all rooms
+      userInfo.rooms.forEach(roomId => {
+        client.leave(roomId);
+        client.to(roomId).emit('user_left', {
+          userId: userInfo.userId,
+          username: userInfo.username,
+          roomId,
+        });
+      });
+
+      this.connectedUsers.delete(client.id);
+      
+      logger.info('Client disconnected', {
+        socketId: client.id,
+        userId: userInfo.userId,
+        username: userInfo.username,
+      });
+    }
+  }
+
+  @SubscribeMessage('join_room')
+  async handleJoinRoom(
+    @MessageBody() data: { roomId: string },
+    @ConnectedSocket() client: Socket,
+  ) {
+    try {
+      const userInfo = this.connectedUsers.get(client.id);
+      if (!userInfo) {
+        client.emit('error', { message: 'User not authenticated' });
+        return;
+      }
+
+      await client.join(data.roomId);
+      userInfo.rooms.add(data.roomId);
+
+      // Notify other users in the room
+      client.to(data.roomId).emit('user_joined', {
+        userId: userInfo.userId,
+        username: userInfo.username,
+        roomId: data.roomId,
+      });
+
+      client.emit('joined_room', {
+        message: `Joined room ${data.roomId}`,
+        roomId: data.roomId,
+      });
+
+      logger.info('User joined room', {
+        userId: userInfo.userId,
+        username: userInfo.username,
+        roomId: data.roomId,
+      });
+
+    } catch (error) {
+      logger.error('Error joining room:', error);
+      client.emit('error', { message: 'Failed to join room' });
+    }
+  }
+
+  @SubscribeMessage('leave_room')
+  async handleLeaveRoom(
+    @MessageBody() data: { roomId: string },
+    @ConnectedSocket() client: Socket,
+  ) {
+    try {
+      const userInfo = this.connectedUsers.get(client.id);
+      if (!userInfo) return;
+
+      await client.leave(data.roomId);
+      userInfo.rooms.delete(data.roomId);
+
+      // Notify other users in the room
+      client.to(data.roomId).emit('user_left', {
+        userId: userInfo.userId,
+        username: userInfo.username,
+        roomId: data.roomId,
+      });
+
+      client.emit('left_room', {
+        message: `Left room ${data.roomId}`,
+        roomId: data.roomId,
+      });
+
+      logger.info('User left room', {
+        userId: userInfo.userId,
+        username: userInfo.username,
+        roomId: data.roomId,
+      });
+
+    } catch (error) {
+      logger.error('Error leaving room:', error);
+      client.emit('error', { message: 'Failed to leave room' });
+    }
+  }
+
+  @SubscribeMessage('send_message')
+  async handleMessage(
+    @MessageBody() data: { roomId: string; content: string; messageType?: string },
+    @ConnectedSocket() client: Socket,
+  ) {
+    try {
+      const userInfo = this.connectedUsers.get(client.id);
+      if (!userInfo) {
+        client.emit('error', { message: 'User not authenticated' });
+        return;
+      }
+
+      if (!userInfo.rooms.has(data.roomId)) {
+        client.emit('error', { message: 'You are not in this room' });
+        return;
+      }
+
+      // Save message to database via gRPC
+      const messageResult = await this.messageService.sendMessage({
+        userId: userInfo.userId,
+        roomId: data.roomId,
+        content: data.content,
+        messageType: data.messageType || 'text',
+      });
+
+      if (!messageResult.success) {
+        client.emit('error', { message: 'Failed to send message' });
+        return;
+      }
+
+      const messageData = {
+        id: messageResult.messageData.id,
+        userId: userInfo.userId,
+        username: userInfo.username,
+        roomId: data.roomId,
+        content: data.content,
+        messageType: data.messageType || 'text',
+        createdAt: new Date().toISOString(),
       };
 
-      return true;
+      // Broadcast to all users in the room (including sender)
+      this.server.to(data.roomId).emit('new_message', messageData);
+
+      logger.info('Message sent', {
+        messageId: messageResult.messageData.id,
+        userId: userInfo.userId,
+        roomId: data.roomId,
+        contentLength: data.content.length,
+      });
+
     } catch (error) {
-      logger.error('Token validation error:', error);
-      throw new UnauthorizedException('Token validation failed');
+      logger.error('Error sending message:', error);
+      client.emit('error', { message: 'Failed to send message' });
+    }
+  }
+
+  @SubscribeMessage('typing_start')
+  handleTypingStart(
+    @MessageBody() data: { roomId: string },
+    @ConnectedSocket() client: Socket,
+  ) {
+    const userInfo = this.connectedUsers.get(client.id);
+    if (userInfo && userInfo.rooms.has(data.roomId)) {
+      client.to(data.roomId).emit('user_typing', {
+        userId: userInfo.userId,
+        username: userInfo.username,
+        roomId: data.roomId,
+        isTyping: true,
+      });
+    }
+  }
+
+  @SubscribeMessage('typing_stop')
+  handleTypingStop(
+    @MessageBody() data: { roomId: string },
+    @ConnectedSocket() client: Socket,
+  ) {
+    const userInfo = this.connectedUsers.get(client.id);
+    if (userInfo && userInfo.rooms.has(data.roomId)) {
+      client.to(data.roomId).emit('user_typing', {
+        userId: userInfo.userId,
+        username: userInfo.username,
+        roomId: data.roomId,
+        isTyping: false,
+      });
     }
   }
 }
 ```
 
-### **services/api-gateway/src/auth/auth.module.ts**
-```typescript
-import { Module } from '@nestjs/common';
-import { AuthController } from './auth.controller';
-import { AuthService } from './auth.service';
-import { JwtAuthGuard } from './guards/jwt-auth.guard';
+## Step 7: Message Service Implementation
 
-@Module({
-  controllers: [AuthController],
-  providers: [AuthService, JwtAuthGuard],
-  exports: [AuthService, JwtAuthGuard],
-})
-export class AuthModule {}
-```
-
-## Step 6: Health Check Module
-
-### **services/api-gateway/src/health/health.controller.ts**
-```typescript
-import { Controller, Get } from '@nestjs/common';
-import { ApiTags, ApiOperation } from '@nestjs/swagger';
-import { HealthService } from './health.service';
-
-@ApiTags('Health')
-@Controller('api/health')
-export class HealthController {
-  constructor(private readonly healthService: HealthService) {}
-
-  @Get()
-  @ApiOperation({ summary: 'Health check endpoint' })
-  async getHealth() {
-    return this.healthService.getHealth();
-  }
-
-  @Get('detailed')
-  @ApiOperation({ summary: 'Detailed health check with service dependencies' })
-  async getDetailedHealth() {
-    return this.healthService.getDetailedHealth();
-  }
-}
-```
-
-### **services/api-gateway/src/health/health.service.ts**
+### **services/message-service/src/message/message.service.ts**
 ```typescript
 import { Injectable } from '@nestjs/common';
-import { AuthGrpcClient } from '@aether/shared';
+import { InjectModel } from '@nestjs/mongoose';
+import { Model } from 'mongoose';
+import { Message, MessageDocument } from './schemas/message.schema';
+import { Room, RoomDocument } from './schemas/room.schema';
+import { createServiceLogger } from '@aether/shared';
+import { v4 as uuidv4 } from 'uuid';
+
+const logger = createServiceLogger('message-service-logic');
 
 @Injectable()
-export class HealthService {
-  async getHealth() {
-    return {
-      status: 'OK',
-      service: 'api-gateway',
-      version: '1.0.0',
-      timestamp: new Date().toISOString(),
-    };
-  }
+export class MessageService {
+  constructor(
+    @InjectModel(Message.name) private messageModel: Model<MessageDocument>,
+    @InjectModel(Room.name) private roomModel: Model<RoomDocument>,
+  ) {}
 
-  async getDetailedHealth() {
-    const health = {
-      status: 'OK',
-      service: 'api-gateway',
-      version: '1.0.0',
-      timestamp: new Date().toISOString(),
-      dependencies: {
-        authService: await this.checkAuthService(),
-      },
-    };
-
-    return health;
-  }
-
-  private async checkAuthService(): Promise<{ status: string; latency?: number }> {
+  async sendMessage(data: any) {
     try {
-      const start = Date.now();
-      const authClient = new AuthGrpcClient(process.env.AUTH_SERVICE_GRPC_URL || 'localhost:50001');
-      await authClient.HealthCheck();
-      const latency = Date.now() - start;
+      const message = new this.messageModel({
+        userId: data.userId,
+        username: data.username || 'Unknown',
+        roomId: data.roomId,
+        content: data.content,
+        messageType: data.messageType || 'text',
+        metadata: data.metadata,
+      });
 
-      return { status: 'OK', latency };
+      const savedMessage = await message.save();
+
+      return {
+        success: true,
+        message: 'Message sent successfully',
+        messageData: {
+          id: savedMessage._id.toString(),
+          userId: savedMessage.userId,
+          username: savedMessage.username,
+          roomId: savedMessage.roomId,
+          content: savedMessage.content,
+          messageType: savedMessage.messageType,
+          metadata: savedMessage.metadata,
+          createdAt: savedMessage.createdAt.toISOString(),
+          updatedAt: savedMessage.updatedAt.toISOString(),
+        },
+      };
     } catch (error) {
-      return { status: 'ERROR' };
+      logger.error('Send message failed:', error);
+      return {
+        success: false,
+        message: 'Failed to send message',
+        error: error.message,
+      };
+    }
+  }
+
+  async getMessageHistory(data: any) {
+    try {
+      const page = parseInt(data.page) || 1;
+      const limit = Math.min(parseInt(data.limit) || 50, 100); // Max 100 messages per request
+      const skip = (page - 1) * limit;
+
+      const messages = await this.messageModel
+        .find({ roomId: data.roomId })
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .exec();
+
+      const totalMessages = await this.messageModel.countDocuments({ roomId: data.roomId });
+      const totalPages = Math.ceil(totalMessages / limit);
+
+      return {
+        success: true,
+        message: 'Message history retrieved successfully',
+        messages: messages.reverse().map(msg => ({
+          id: msg._id.toString(),
+          userId: msg.userId,
+          username: msg.username,
+          roomId: msg.roomId,
+          content: msg.content,
+          messageType: msg.messageType,
+          metadata: msg.metadata,
+          createdAt: msg.createdAt.toISOString(),
+          updatedAt: msg.updatedAt.toISOString(),
+        })),
+        pagination: {
+          currentPage: page,
+          totalPages,
+          totalItems: totalMessages,
+          itemsPerPage: limit,
+          hasNext: page < totalPages,
+          hasPrevious: page > 1,
+        },
+      };
+    } catch (error) {
+      logger.error('Get message history failed:', error);
+      return {
+        success: false,
+        message: 'Failed to get message history',
+        error: error.message,
+      };
+    }
+  }
+
+  async createRoom(data: any) {
+    try {
+      const room = new this.roomModel({
+        name: data.name,
+        description: data.description,
+        roomType: data.roomType || 'public',
+        createdBy: data.createdBy,
+        members: [data.createdBy],
+      });
+
+      const savedRoom = await room.save();
+
+      return {
+        success: true,
+        message: 'Room created successfully',
+        room: {
+          id: savedRoom._id.toString(),
+          name: savedRoom.name,
+          description: savedRoom.description,
+          roomType: savedRoom.roomType,
+          createdBy: savedRoom.createdBy,
+          members: savedRoom.members,
+          createdAt: savedRoom.createdAt.toISOString(),
+          updatedAt: savedRoom.updatedAt.toISOString(),
+        },
+      };
+    } catch (error) {
+      logger.error('Create room failed:', error);
+      return {
+        success: false,
+        message: 'Failed to create room',
+        error: error.message,
+      };
+    }
+  }
+
+  async getRooms(data: any) {
+    try {
+      const rooms = await this.roomModel
+        .find({ 
+          $or: [
+            { members: data.userId },
+            { roomType: 'public' }
+          ]
+        })
+        .sort({ updatedAt: -1 })
+        .exec();
+
+      return {
+        success: true,
+        message: 'Rooms retrieved successfully',
+        rooms: rooms.map(room => ({
+          id: room._id.toString(),
+          name: room.name,
+          description: room.description,
+          roomType: room.roomType,
+          createdBy: room.createdBy,
+          members: room.members,
+          createdAt: room.createdAt.toISOString(),
+          updatedAt: room.updatedAt.toISOString(),
+        })),
+      };
+    } catch (error) {
+      logger.error('Get rooms failed:', error);
+      return {
+        success: false,
+        message: 'Failed to get rooms',
+        error: error.message,
+      };
+    }
+  }
+
+  async joinRoom(data: any) {
+    try {
+      const room = await this.roomModel.findById(data.roomId);
+      
+      if (!room) {
+        return {
+          success: false,
+          message: 'Room not found',
+        };
+      }
+
+      if (!room.members.includes(data.userId)) {
+        room.members.push(data.userId);
+        await room.save();
+      }
+
+      return {
+        success: true,
+        message: 'Joined room successfully',
+        room: {
+          id: room._id.toString(),
+          name: room.name,
+          description: room.description,
+          roomType: room.roomType,
+          createdBy: room.createdBy,
+          members: room.members,
+          createdAt: room.createdAt.toISOString(),
+          updatedAt: room.updatedAt.toISOString(),
+        },
+      };
+    } catch (error) {
+      logger.error('Join room failed:', error);
+      return {
+        success: false,
+        message: 'Failed to join room',
+        error: error.message,
+      };
     }
   }
 }
 ```
 
-### **services/api-gateway/src/health/health.module.ts**
-```typescript
-import { Module } from '@nestjs/common';
-import { HealthController } from './health.controller';
-import { HealthService } from './health.service';
+## Step 8: Message gRPC Controller
 
-@Module({
-  controllers: [HealthController],
-  providers: [HealthService],
-})
-export class HealthModule {}
+### **services/message-service/src/message/message.controller.ts**
+```typescript
+import { Controller } from '@nestjs/common';
+import { GrpcMethod } from '@nestjs/microservices';
+import { MessageService } from './message.service';
+import { createServiceLogger } from '@aether/shared';
+
+const logger = createServiceLogger('message-controller');
+
+@Controller()
+export class MessageController {
+  constructor(private readonly messageService: MessageService) {}
+
+  @GrpcMethod('MessageService', 'SendMessage')
+  async sendMessage(data: any) {
+    try {
+      logger.info('SendMessage gRPC call received', { 
+        userId: data.userId, 
+        roomId: data.roomId,
+        messageType: data.messageType 
+      });
+      
+      const result = await this.messageService.sendMessage(data);
+      
+      logger.info('SendMessage completed', { 
+        success: result.success,
+        messageId: result.messageData?.id 
+      });
+      
+      return result;
+    } catch (error) {
+      logger.error('SendMessage failed:', error);
+      return {
+        success: false,
+        message: 'Failed to send message',
+        error: error.message,
+      };
+    }
+  }
+
+  @GrpcMethod('MessageService', 'GetMessageHistory')
+  async getMessageHistory(data: any) {
+    try {
+      logger.info('GetMessageHistory gRPC call received', { 
+        userId: data.userId, 
+        roomId: data.roomId,
+        page: data.page,
+        limit: data.limit 
+      });
+      
+      const result = await this.messageService.getMessageHistory(data);
+      
+      logger.info('GetMessageHistory completed', { 
+        success: result.success,
+        messageCount: result.messages?.length 
+      });
+      
+      return result;
+    } catch (error) {
+      logger.error('GetMessageHistory failed:', error);
+      return {
+        success: false,
+        message: 'Failed to get message history',
+        error: error.message,
+      };
+    }
+  }
+
+  @GrpcMethod('MessageService', 'CreateRoom')
+  async createRoom(data: any) {
+    try {
+      logger.info('CreateRoom gRPC call received', { 
+        name: data.name, 
+        createdBy: data.createdBy,
+        roomType: data.roomType 
+      });
+      
+      const result = await this.messageService.createRoom(data);
+      
+      logger.info('CreateRoom completed', { 
+        success: result.success,
+        roomId: result.room?.id 
+      });
+      
+      return result;
+    } catch (error) {
+      logger.error('CreateRoom failed:', error);
+      return {
+        success: false,
+        message: 'Failed to create room',
+        error: error.message,
+      };
+    }
+  }
+
+  @GrpcMethod('MessageService', 'GetRooms')
+  async getRooms(data: any) {
+    try {
+      logger.info('GetRooms gRPC call received', { userId: data.userId });
+      
+      const result = await this.messageService.getRooms(data);
+      
+      logger.info('GetRooms completed', { 
+        success: result.success,
+        roomCount: result.rooms?.length 
+      });
+      
+      return result;
+    } catch (error) {
+      logger.error('GetRooms failed:', error);
+      return {
+        success: false,
+        message: 'Failed to get rooms',
+        error: error.message,
+      };
+    }
+  }
+
+  @GrpcMethod('MessageService', 'JoinRoom')
+  async joinRoom(data: any) {
+    try {
+      logger.info('JoinRoom gRPC call received', { 
+        userId: data.userId, 
+        roomId: data.roomId 
+      });
+      
+      const result = await this.messageService.joinRoom(data);
+      
+      logger.info('JoinRoom completed', { 
+        success: result.success,
+        roomId: data.roomId 
+      });
+      
+      return result;
+    } catch (error) {
+      logger.error('JoinRoom failed:', error);
+      return {
+        success: false,
+        message: 'Failed to join room',
+        error: error.message,
+      };
+    }
+  }
+
+  @GrpcMethod('MessageService', 'HealthCheck')
+  async healthCheck() {
+    return {
+      success: true,
+      message: 'Message Service is healthy',
+      service: 'message-service',
+      version: '1.0.0',
+      timestamp: new Date().toISOString(),
+    };
+  }
+}
 ```
 
-## Step 7: Update Environment & Root Configuration
+## Step 9: Module Configurations
+
+### **services/message-service/src/message/message.module.ts**
+```typescript
+import { Module } from '@nestjs/common';
+import { MongooseModule } from '@nestjs/mongoose';
+import { MessageController } from './message.controller';
+import { MessageService } from './message.service';
+import { Message, MessageSchema } from './schemas/message.schema';
+import { Room, RoomSchema } from './schemas/room.schema';
+
+@Module({
+  imports: [
+    MongooseModule.forFeature([
+      { name: Message.name, schema: MessageSchema },
+      { name: Room.name, schema: RoomSchema },
+    ]),
+  ],
+  controllers: [MessageController],
+  providers: [MessageService],
+  exports: [MessageService],
+})
+export class MessageModule {}
+```
+
+### **services/message-service/src/socket/socket.module.ts**
+```typescript
+import { Module } from '@nestjs/common';
+import { SocketGateway } from './socket.gateway';
+import { MessageModule } from '../message/message.module';
+
+@Module({
+  imports: [MessageModule],
+  providers: [SocketGateway],
+})
+export class SocketModule {}
+```
+
+## Step 10: Update Environment & Root Configuration
 
 ### **Update .env file**
 ```env
@@ -1542,6 +1287,8 @@ LOG_LEVEL=debug
 
 # Database URLs
 POSTGRES_URL=postgresql://aether:secret123@localhost:5432/aetherconnect
+MONGODB_URL=mongodb://aether:secret123@localhost:27017/aetherconnect
+REDIS_URL=redis://:secret123@localhost:6379
 
 # JWT Configuration
 JWT_SECRET=your-super-secret-access-key-change-in-production-2025
@@ -1550,15 +1297,18 @@ JWT_REFRESH_SECRET=your-super-secret-refresh-key-change-in-production-2025
 # Service Ports
 API_GATEWAY_PORT=3000
 AUTH_SERVICE_GRPC_PORT=50001
+MESSAGE_SERVICE_GRPC_PORT=50002
+MESSAGE_SERVICE_HTTP_PORT=3002
 
 # Service URLs
 AUTH_SERVICE_GRPC_URL=localhost:50001
+MESSAGE_SERVICE_GRPC_URL=localhost:50002
 
 # Frontend
 FRONTEND_URL=http://localhost:3004
 ```
 
-### **Update Root package.json**
+### **Update Root package.json scripts**
 ```json
 {
   "name": "aetherconnect",
@@ -1566,11 +1316,12 @@ FRONTEND_URL=http://localhost:3004
   "private": true,
   "workspaces": ["services/*", "packages/*"],
   "scripts": {
-    "dev": "concurrently \"pnpm dev:auth\" \"pnpm dev:gateway\"",
-    "dev:auth": "pnpm --filter @aether/auth-service-nestjs run dev",
-    "dev:gateway": "pnpm --filter @aether/api-gateway run dev",
+    "dev": "concurrently \"pnpm dev:auth\" \"pnpm dev:gateway\" \"pnpm dev:message\"",
+    "dev:auth": "cd services/auth-service-nestjs && pnpm exec nest start --watch",
+    "dev:gateway": "cd services/api-gateway && pnpm exec nest start --watch", 
+    "dev:message": "cd services/message-service && pnpm exec nest start --watch",
     "build": "pnpm -r run build",
-    "docker:up": "docker-compose up -d",
+    "docker:up": "docker compose up -d",
     "setup": "pnpm install && pnpm docker:up && sleep 5"
   },
   "devDependencies": {
@@ -1579,91 +1330,158 @@ FRONTEND_URL=http://localhost:3004
 }
 ```
 
-## Step 8: Setup & Testing Commands
+## Step 11: Testing Commands
 
 ```bash
-# 1. Build shared package
-cd packages/shared
-pnpm install && pnpm build
+# 1. Install dependencies for message service
+cd services/message-service
+pnpm install
 cd ../..
 
-# 2. Install all service dependencies
-pnpm install
+# 2. Update shared package and rebuild
+cd packages/shared
+pnpm build
+cd ../..
 
 # 3. Start infrastructure
 pnpm docker:up
 
-# 4. Start both services
+# 4. Start all services
 pnpm dev
 
-# In separate terminals, you should see:
+# You should see:
 # 🔐 Auth Service (gRPC) is listening on port 50001
-# 🚀 API Gateway is running on http://localhost:3000
+# 🚀 API Gateway is running on http://localhost:3000  
+# 💬 Message Service (gRPC) is listening on port 50002
+# 🌐 Message Service (Socket.io) is listening on port 3002
 ```
 
-## Step 9: Test Your Microservices Architecture
+## Step 12: Test Real-Time Messaging
 
-### **Test Registration via API Gateway:**
-```bash
-curl -X POST http://localhost:3000/api/auth/register \
-  -H "Content-Type: application/json" \
-  -d '{
-    "username": "testuser",
-    "email": "test@example.com",
-    "password": "password123",
-    "firstName": "Test",
-    "lastName": "User"
-  }'
+### **Simple HTML Test Client** (create `test-client.html`)
+```html
+<!DOCTYPE html>
+<html>
+<head>
+    <title>AetherConnect Test Client</title>
+    <script src="https://cdn.socket.io/4.7.4/socket.io.min.js"></script>
+</head>
+<body>
+    <h1>AetherConnect Chat Test</h1>
+    
+    <div>
+        <input id="token" placeholder="JWT Token" style="width: 400px;"/>
+        <button onclick="connect()">Connect</button>
+    </div>
+    
+    <div>
+        <input id="roomId" placeholder="Room ID (e.g., general)" value="general"/>
+        <button onclick="joinRoom()">Join Room</button>
+    </div>
+    
+    <div>
+        <input id="message" placeholder="Type a message"/>
+        <button onclick="sendMessage()">Send</button>
+    </div>
+    
+    <div>
+        <h3>Messages:</h3>
+        <div id="messages" style="border: 1px solid #ccc; height: 300px; overflow-y: scroll; padding: 10px;"></div>
+    </div>
+
+    <script>
+        let socket = null;
+        
+        function connect() {
+            const token = document.getElementById('token').value;
+            if (!token) {
+                alert('Please enter a JWT token');
+                return;
+            }
+            
+            socket = io('http://localhost:3002', {
+                auth: {
+                    token: token
+                }
+            });
+            
+            socket.on('connected', (data) => {
+                addMessage('✅ Connected: ' + data.message);
+            });
+            
+            socket.on('new_message', (data) => {
+                addMessage(`${data.username}: ${data.content}`);
+            });
+            
+            socket.on('user_joined', (data) => {
+                addMessage(`👋 ${data.username} joined the room`);
+            });
+            
+            socket.on('user_left', (data) => {
+                addMessage(`👋 ${data.username} left the room`);
+            });
+            
+            socket.on('error', (data) => {
+                addMessage('❌ Error: ' + data.message);
+            });
+        }
+        
+        function joinRoom() {
+            const roomId = document.getElementById('roomId').value;
+            if (socket && roomId) {
+                socket.emit('join_room', { roomId });
+            }
+        }
+        
+        function sendMessage() {
+            const message = document.getElementById('message').value;
+            const roomId = document.getElementById('roomId').value;
+            
+            if (socket && message && roomId) {
+                socket.emit('send_message', { 
+                    roomId, 
+                    content: message,
+                    messageType: 'text'
+                });
+                document.getElementById('message').value = '';
+            }
+        }
+        
+        function addMessage(text) {
+            const messages = document.getElementById('messages');
+            const div = document.createElement('div');
+            div.textContent = new Date().toLocaleTimeString() + ' - ' + text;
+            messages.appendChild(div);
+            messages.scrollTop = messages.scrollHeight;
+        }
+    </script>
+</body>
+</html>
 ```
 
-### **Test Login:**
-```bash
-curl -X POST http://localhost:3000/api/auth/login \
-  -H "Content-Type: application/json" \
-  -d '{
-    "email": "test@example.com",
-    "password": "password123"
-  }'
-```
+## Phase 4 Success Criteria
 
-### **Test Protected Route:**
-```bash
-# Use the access token from login response
-curl -X GET http://localhost:3000/api/auth/profile \
-  -H "Authorization: Bearer YOUR_ACCESS_TOKEN_HERE"
-```
+By the end of Day 12, you should have:
 
-### **Test Health Checks:**
-```bash
-# API Gateway health
-curl http://localhost:3000/api/health
-
-# Detailed health (includes Auth Service check)
-curl http://localhost:3000/api/health/detailed
-```
-
-## Phase 3 Success Criteria
-
-By the end of Day 9, you should have:
-
-✅ **NestJS Auth Service** running on gRPC (port 50001)  
-✅ **NestJS API Gateway** running on HTTP (port 3000)  
-✅ **Protocol Buffers** defining service contracts  
-✅ **Type-safe gRPC communication** between services  
-✅ **Proper error handling** and logging  
-✅ **JWT authentication** working through microservices  
-✅ **Swagger documentation** available at `/api/docs`  
-✅ **Health checks** for service monitoring  
+✅ **Message Service** running on gRPC (port 50002) + Socket.io (port 3002)  
+✅ **MongoDB integration** for message and room persistence  
+✅ **Redis adapter** for Socket.io horizontal scaling  
+✅ **Real-time messaging** working via WebSocket  
+✅ **Room management** (create, join, leave rooms)  
+✅ **Message history** with pagination via gRPC  
+✅ **User authentication** integrated with Auth Service  
+✅ **Typing indicators** and user presence  
+✅ **Error handling** and comprehensive logging  
 
 ## What You Now Have
 
-- **True microservices architecture** with NestJS
-- **Service-to-service communication** via gRPC  
-- **HTTP API Gateway** that routes to microservices
-- **Type safety** across service boundaries
-- **Enterprise-grade error handling** and logging
-- **Production-ready patterns** for scaling
+- **Complete real-time chat system** with WebSocket communication
+- **Message persistence** in MongoDB with room management
+- **Scalable architecture** with Redis for horizontal scaling
+- **Type-safe gRPC communication** between all services
+- **JWT authentication** integrated across the entire system
+- **Production-ready logging** and error handling
 
-**Your frontend can now connect to the same endpoints, but they're powered by microservices!** 🎉
+**Your chat application is now LIVE with real-time messaging!** 🎉
 
-Ready for **Phase 4: WebSocket Messaging Service**? 🚀
+Ready for **Phase 5: Frontend Integration**? Your custom frontend will connect to these powerful backend services! 🚀

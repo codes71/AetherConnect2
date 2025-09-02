@@ -4,9 +4,10 @@
   "private": true,
   "workspaces": ["services/*", "packages/*"],
   "scripts": {
-    "dev": "concurrently \"pnpm dev:auth\" \"pnpm dev:gateway\"",
+    "dev": "concurrently \"pnpm dev:auth\" \"pnpm dev:gateway\" \"pnpm dev:message\"",
     "dev:auth": "cd services/auth-service-nestjs && pnpm exec nest start --watch",
-    "dev:gateway": "cd services/api-gateway && pnpm exec nest start --watch",
+    "dev:gateway": "cd services/api-gateway && pnpm exec nest start --watch", 
+    "dev:message": "cd services/message-service && pnpm exec nest start --watch --config nest-cli.json",
     "build": "pnpm -r run build",
     "docker:up": "docker compose up -d",
     "setup": "pnpm install && pnpm docker:up && sleep 5"
