@@ -21,6 +21,7 @@ services:
       - LOG_LEVEL=info
       
       # Database URLs
+      - POSTGRES_PASSWORD=IxwcwREzsswjBvDM
       - POSTGRES_URL=postgresql://postgres.thijnzgwuwkpkdddctdm:IxwcwREzsswjBvDM@aws-1-us-east-2.pooler.supabase.com:6543/postgres?pgbouncer=true
       - MONGODB_URL=mongodb+srv://thura:KlFe8bUKMM8yGRVB@cluster0.w6nkg1u.mongodb.net/aetherconnect?retryWrites=true&w=majority&appName=Cluster0
       - REDIS_URL=rediss://default:AdDsAAIncDEzZWQ4OTAzYTRkYWI0NzMzOWU5MzAwNDgwZWZjNTYxOXAxNTM0ODQ@on-stag-53484.upstash.io:6379
