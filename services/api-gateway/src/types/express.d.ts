@@ -1,5 +1,16 @@
-declare namespace Express {
-  interface Request {
-    user?: { userId: string; email: string; /* Add other properties from your JWT payload if needed */ };
+// services/api-gateway/src/types/express.d.ts
+import { Request } from 'express';
+
+interface User {
+  userId: string;
+  email: string;
+  username: string;
+}
+
+declare global {
+  namespace Express {
+    interface Request {
+      user?: User;
+    }
   }
 }
