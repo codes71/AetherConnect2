@@ -59,6 +59,7 @@ token.md
 AI_CONTEXT.md
 docker-compose.test.yml
 Dockerfile.backend
+docker-compose.yml
 
 # Amazon Q CLI
 .amazonq/
@@ -66,3 +67,4 @@ Dockerfile.backend
 # Scripts (if not needed for deployment)
 scripts/
 !ecosystem.config.js
+docker-compose.dev.yml
