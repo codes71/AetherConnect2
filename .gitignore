@@ -65,3 +65,4 @@ Dockerfile.backend
 
 # Scripts (if not needed for deployment)
 scripts/
+!ecosystem.config.js
