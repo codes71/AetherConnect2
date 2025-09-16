@@ -19,11 +19,18 @@ RUN cd services/auth-service-nestjs && pnpm run build
 RUN cd services/message-service && pnpm run build  
 RUN cd services/api-gateway && pnpm run build
 
-# Create PM2 ecosystem file
+# --- DEBUGGING STEP ---
+# List all files to check if build artifacts exist
+RUN ls -lR services
+# --- END DEBUGGING STEP ---
+
+# Create PM2 ecosystem file and startup script
 COPY ecosystem.config.js ./
+COPY start.sh ./
+RUN chmod +x start.sh
 
 # Expose only gateway port
 EXPOSE 3000
 
-# Start all services with PM2
-CMD ["pm2-runtime", "start", "ecosystem.config.js"]
+# Start all services with coordinated startup
+CMD ["./start.sh"]
