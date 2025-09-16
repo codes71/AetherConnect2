@@ -4,7 +4,7 @@ import { User } from "../users/entities/user.entity";
 import * as dotenv from "dotenv";
 
 dotenv.config({ path: "../../.env" });
-
+// console.log("Connecting to Postgres at:", process.env.POSTGRES_PASSWORD);
 @Module({
   imports: [
     TypeOrmModule.forRoot({
@@ -16,10 +16,12 @@ dotenv.config({ path: "../../.env" });
       database: "postgres",
       connectTimeoutMS: 10000,
       extra: {
-        ssl: { rejectUnauthorized: false }
+        ssl: {
+          rejectUnauthorized: false,
+        },
       },
       entities: [User],
-      synchronize: true, // Set to false in production and use migrations
+      // synchronize: true, // Set to false in production and use migrations
       logging: false,
     }),
   ],

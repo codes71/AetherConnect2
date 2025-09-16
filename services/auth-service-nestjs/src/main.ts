@@ -5,9 +5,9 @@ import { join } from "path";
 import { AppModule } from "./app.module";
 import { createServiceLogger } from "@aether/shared";
 
-dotenv.config({ path: "../../.env" });
 const logger = createServiceLogger("auth-service");
 
+dotenv.config({ path: "../../.env" });
 
 async function bootstrap() {
   try {

@@ -1,0 +1,42 @@
+services:
+  - type: web
+    name: aetherconnect
+    env: docker
+    dockerfilePath: ./Dockerfile
+    plan: starter
+    region: oregon
+    branch: main
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: LOG_LEVEL
+        value: info
+      - key: POSTGRES_PASSWORD
+        sync: false
+      - key: POSTGRES_URL
+        sync: false
+      - key: MONGODB_URL
+        sync: false
+      - key: REDIS_URL
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: JWT_WS_SECRET
+        sync: false
+      - key: JWT_REFRESH_SECRET
+        sync: false
+      - key: API_GATEWAY_PORT
+        value: 3000
+      - key: AUTH_SERVICE_GRPC_PORT
+        value: 50001
+      - key: MESSAGE_SERVICE_GRPC_PORT
+        value: 50002
+      - key: MESSAGE_SERVICE_HTTP_PORT
+        value: 3002
+      - key: AUTH_SERVICE_GRPC_URL
+        value: localhost:50001
+      - key: MESSAGE_SERVICE_GRPC_URL
+        value: localhost:50002
+      - key: FRONTEND_URL
+        value: https://aetherconnect.onrender.com
