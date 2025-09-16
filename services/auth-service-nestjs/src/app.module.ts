@@ -15,7 +15,7 @@ import { DatabaseModule } from './database/database.module';
     DatabaseModule,
     JwtModule.register({
       global: true,
-      secret: process.env.JWT_SECRET || 'your-secret-key',
+      secret: process.env.JWT_SECRET,
       signOptions: { expiresIn: '15m' },
     }),
     AuthModule,

@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import { Model, Types } from 'mongoose';
 import { Message, MessageDocument } from './schemas/message.schema';
 import { Room, RoomDocument } from './schemas/room.schema';
 import { createServiceLogger } from '@aether/shared';
@@ -59,14 +59,28 @@ export class MessageService {
       const limit = Math.min(parseInt(data.limit) || 50, 100); // Max 100 messages per request
       const skip = (page - 1) * limit;
 
+      let room;
+      if (Types.ObjectId.isValid(data.roomId)) {
+        room = await this.roomModel.findById(data.roomId).exec();
+      } else {
+        room = await this.roomModel.findOne({ name: data.roomId }).exec();
+      }
+
+      if (!room) {
+        return {
+          success: false,
+          message: 'Room not found',
+        };
+      }
+
       const messages = await this.messageModel
-        .find({ roomId: data.roomId })
+        .find({ roomId: room._id.toString() })
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(limit)
         .exec();
 
-      const totalMessages = await this.messageModel.countDocuments({ roomId: data.roomId });
+      const totalMessages = await this.messageModel.countDocuments({ roomId: room._id.toString() });
       const totalPages = Math.ceil(totalMessages / limit);
 
       return {
@@ -104,12 +118,18 @@ export class MessageService {
 
   async createRoom(data: any) {
     try {
+      const members = [data.createdBy];
+      // Temporary hack: Manually add a dummy user to the 'general' room
+      if (data.name === 'general') {
+        members.push('dummy-user-id-for-general-room'); // Replace with a real user ID if available
+      }
+
       const room = new this.roomModel({
         name: data.name,
         description: data.description,
         roomType: data.roomType || 'public',
         createdBy: data.createdBy,
-        members: [data.createdBy],
+        members: members, // Use the modified members array
       });
 
       const savedRoom = await room.save();
@@ -140,15 +160,19 @@ export class MessageService {
 
   async getRooms(data: any) {
     try {
+      console.log("USER ID",data.userId)
       const rooms = await this.roomModel
-        .find({ 
-          $or: [
-            { members: data.userId },
-            { roomType: 'public' }
-          ]
-        })
+        .find({ members: data.userId })
         .sort({ updatedAt: -1 })
         .exec();
+
+      if (!rooms || rooms.length === 0) {
+        return {
+          success: true,
+          message: 'No rooms joined yet.',
+          rooms: [],
+        };
+      }
 
       return {
         success: true,
@@ -175,8 +199,17 @@ export class MessageService {
   }
 
   async joinRoom(data: any) {
+    logger.info('Attempting to join room', { userId: data.userId, roomId: data.roomId });
     try {
-      const room = await this.roomModel.findById(data.roomId);
+      let room;
+      // Check if roomId is a valid ObjectId
+      if (Types.ObjectId.isValid(data.roomId)) {  
+        // Query by MongoDB _id
+        room = await this.roomModel.findById(data.roomId);
+      } else {
+        // Query by room name (for cases like "general")
+        room = await this.roomModel.findOne({ name: data.roomId });
+      }
       
       if (!room) {
         return {
@@ -186,6 +219,7 @@ export class MessageService {
       }
 
       if (!room.members.includes(data.userId)) {
+        logger.info('Adding user to room members', { userId: data.userId, roomId: room.name });
         room.members.push(data.userId);
         await room.save();
       }
@@ -209,6 +243,136 @@ export class MessageService {
       return {
         success: false,
         message: 'Failed to join room',
+        error: error.message,
+      };
+    }
+  }
+
+  async checkRoomMembership(data: { userId: string; roomId: string }) {
+    try {
+      let room;
+      logger.info('Checking room membershipppn from service',{data})
+      
+      // Check if roomId is a valid ObjectId
+      if (Types.ObjectId.isValid(data.roomId)) {
+        // Query by MongoDB _id
+        room = await this.roomModel.findById(data.roomId);
+      } else {
+        // Query by room name (for cases like "general")
+        room = await this.roomModel.findOne({ name: data.roomId });
+      }
+      const isPublic = room?.roomId == 'general';
+
+      if (!room) {
+        console.log(isPublic)
+        return { 
+          success: false, 
+          isMember: false, 
+          message: `Room '${data.roomId}' not found`,
+          roomType: 'public' // Added roomType for consistency
+        };
+      }
+
+      // Check membership
+      const isMember = room.members.includes(data.userId) || room.roomType === 'public';
+      
+      return {
+        success: true,
+        isMember,
+        roomType: room.roomType,
+        message: isMember ? 'User is a member' : 'User is not a member', // Added message for consistency
+        room: {
+          id: room._id.toString(),
+          name: room.name,
+          roomType: room.roomType // Added roomType for consistency
+        }
+      };
+    } catch (error) {
+      logger.error('Check room membership failed', error);
+      return { 
+        success: false, 
+        isMember: false, 
+        message: 'Failed to check room membership',
+        error: error.message,
+        roomType: null
+      };
+    }
+  }
+
+  // Also add a method to ensure users can always join public rooms
+  async ensureRoomAccess(data: { userId: string; roomId: string }) {
+    try {
+      const membershipResult = await this.checkRoomMembership(data);
+      
+      if (!membershipResult.success) {
+        return membershipResult;
+      }
+
+      if (membershipResult.isMember) {
+        return {
+          success: true,
+          message: 'User already has access',
+          room: membershipResult.room
+        };
+      }
+
+      // If it's a public room, auto-join the user
+      if (membershipResult.roomType === 'public') {
+        return this.joinRoom(data);
+      }
+
+      return {
+        success: false,
+        message: 'User cannot access this private room'
+      };
+    } catch (error) {
+      logger.error('Ensure room access failed', error);
+      return {
+        success: false,
+        message: 'Failed to ensure room access',
+        error: error.message
+      };
+    }
+  }
+
+  async getRoomById(roomId: string) {
+    try {
+      let room;
+      // Check if roomId is a valid ObjectId
+      if (Types.ObjectId.isValid(roomId)) {  
+        // Query by MongoDB _id
+        room = await this.roomModel.findById(roomId).exec();
+      } else {
+        // Query by room name (for cases like "general")
+        room = await this.roomModel.findOne({ name: roomId }).exec();
+      }
+
+      if (!room) {
+        return {
+          success: false,
+          message: 'Room not found',
+        };
+      }
+
+      return {
+        success: true,
+        message: 'Room retrieved successfully',
+        room: {
+          id: room._id.toString(),
+          name: room.name,
+          description: room.description,
+          roomType: room.roomType,
+          createdBy: room.createdBy,
+          members: room.members,
+          createdAt: room.createdAt.toISOString(),
+          updatedAt: room.updatedAt.toISOString(),
+        },
+      };
+    } catch (error) {
+      logger.error('Get room by ID failed:', error);
+      return {
+        success: false,
+        message: 'Failed to retrieve room',
         error: error.message,
       };
     }

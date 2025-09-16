@@ -33,8 +33,7 @@ async function bootstrap() {
     
     // Enable CORS for Socket.io
     httpApp.enableCors({
-      origin: process.env.FRONTEND_URL || 'http://localhost:3004',
-      credentials: true,
+      origin: '*'
     });
 
     // Start both services

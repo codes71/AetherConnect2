@@ -1,20 +1,26 @@
-import { Module } from '@nestjs/common';
-import { TypeOrmModule } from '@nestjs/typeorm';
-import { User } from '../users/entities/user.entity';
+import { Module } from "@nestjs/common";
+import { TypeOrmModule } from "@nestjs/typeorm";
+import { User } from "../users/entities/user.entity";
+import * as dotenv from "dotenv";
+
+dotenv.config({ path: "../../.env" });
 
 @Module({
   imports: [
     TypeOrmModule.forRoot({
-      type: 'postgres',
-      url: (() => {
-        const dbUrl = process.env.POSTGRES_URL  || 'postgresql://aether:aether_secret_2025@localhost:5433/aetherconnect';
-        console.log(`Attempting to connect to database with URL: ${dbUrl}`);
-        return dbUrl;
-      })(),
+      type: "postgres",
+      host: "aws-1-us-east-2.pooler.supabase.com",
+      port: 6543,
+      username: "postgres.thijnzgwuwkpkdddctdm",
+      password: process.env.POSTGRES_PASSWORD,
+      database: "postgres",
+      connectTimeoutMS: 10000,
+      extra: {
+        ssl: { rejectUnauthorized: false }
+      },
       entities: [User],
-      synchronize: process.env.NODE_ENV !== 'production', // Only for development!
-      logging: process.env.NODE_ENV === 'development',
-      ssl: false,
+      synchronize: true, // Set to false in production and use migrations
+      logging: false,
     }),
   ],
 })

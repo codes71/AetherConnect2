@@ -8,7 +8,28 @@ service MessageService {
   rpc GetRooms(GetRoomsRequest) returns (RoomsResponse);
   rpc CreateRoom(CreateRoomRequest) returns (RoomResponse);
   rpc JoinRoom(JoinRoomRequest) returns (RoomResponse);
+  rpc CheckRoomMembership(CheckRoomMembershipRequest) returns (RoomMembershipResponse); // NEW
   rpc HealthCheck(HealthCheckRequest) returns (HealthCheckResponse);
+  rpc GetRoomById(GetRoomByIdRequest) returns (RoomResponse); // New method
+}
+
+// Add new messages
+message GetRoomByIdRequest {
+  string roomId = 1;
+}
+
+message CheckRoomMembershipRequest {
+  string userId = 1;
+  string roomId = 2;
+}
+
+message RoomMembershipResponse {
+  bool success = 1;
+  string message = 2;
+  bool isMember = 3;
+  optional string roomType = 4;
+  optional RoomData room = 5;
+  optional string error = 6;
 }
 
 message SendMessageRequest {

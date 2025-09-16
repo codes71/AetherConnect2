@@ -2,17 +2,34 @@
   "name": "aetherconnect",
   "version": "1.0.0",
   "private": true,
-  "workspaces": ["services/*", "packages/*"],
+  "workspaces": [
+    "services/*",
+    "packages/*",
+    "apps/*"
+  ],
   "scripts": {
     "dev": "concurrently \"pnpm dev:auth\" \"pnpm dev:gateway\" \"pnpm dev:message\"",
+    "start": "concurrently \"pnpm start:auth\" \"pnpm start:gateway\" \"pnpm start:message\"",
+    "start:auth": "cd services/auth-service-nestjs && pnpm exec nest start",
+    "start:gateway": "cd services/api-gateway && pnpm exec nest start",
+    "start:message": "cd services/message-service && pnpm exec nest start",
     "dev:auth": "cd services/auth-service-nestjs && pnpm exec nest start --watch",
-    "dev:gateway": "cd services/api-gateway && pnpm exec nest start --watch", 
-    "dev:message": "cd services/message-service && pnpm exec nest start --watch --config nest-cli.json",
+    "dev:gateway": "cd services/api-gateway && pnpm exec nest start --watch",
+    "dev:message": "cd services/message-service && pnpm exec nest start --watch",
+    "dev:frontend": "cd apps/frontend-v2 && pnpm dev",
     "build": "pnpm -r run build",
+    "docker:build": "docker compose build",
+    "docker:build:auth": "docker build -f services/auth-service-nestjs/Dockerfile -t aether-auth .",
+    "docker:build:message": "docker build -f services/message-service/Dockerfile -t aether-message .",
+    "docker:build:gateway": "docker build -f services/api-gateway/Dockerfile -t aether-gateway .",
+    "docker:build:all": "pnpm docker:build:auth && pnpm docker:build:message && pnpm docker:build:gateway",
     "docker:up": "docker compose up -d",
-    "setup": "pnpm install && pnpm docker:up && sleep 5"
+    "docker:down": "docker compose down",
+    "docker:logs": "docker compose logs -f",
+    "docker:rebuild": "docker compose down && docker compose build && docker compose up -d",
+    "setup": "pnpm install && pnpm docker:run && sleep 5"
   },
   "devDependencies": {
-    "concurrently": "^8.2.2"
+    "concurrently": "^9.2.1"
   }
 }

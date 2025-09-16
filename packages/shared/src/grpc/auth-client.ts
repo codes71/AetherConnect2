@@ -10,9 +10,11 @@ export interface AuthServiceClient {
   ValidateToken(request: any): Promise<any>;
   Login(request: any): Promise<any>;
   RefreshToken(request: any): Promise<any>;
+  Logout(request: any): Promise<any>;
   GetUserProfile(request: any): Promise<any>;
   UpdateUserProfile(request: any): Promise<any>;
   HealthCheck(request: any): Promise<any>;
+  GetWebSocketToken(request: any): Promise<any>;
 }
 
 export class AuthGrpcClient implements AuthServiceClient {
@@ -58,7 +60,6 @@ export class AuthGrpcClient implements AuthServiceClient {
           logger.error(`gRPC ${method} error:`, error);
           reject(error);
         } else {
-          logger.debug(`gRPC ${method} success:`, { request, response });
           resolve(response);
         }
       });
@@ -81,6 +82,10 @@ export class AuthGrpcClient implements AuthServiceClient {
     return this.promisifyCall('RefreshToken', request);
   }
 
+  async Logout(request: any): Promise<any> {
+    return this.promisifyCall('Logout', request);
+  }
+
   async GetUserProfile(request: any): Promise<any> {
     return this.promisifyCall('GetUserProfile', request);
   }
@@ -91,5 +96,9 @@ export class AuthGrpcClient implements AuthServiceClient {
 
   async HealthCheck(request: any = {}): Promise<any> {
     return this.promisifyCall('HealthCheck', request);
+  }
+
+  async GetWebSocketToken(request: any): Promise<any> { // New method
+    return this.promisifyCall('GetWebSocketToken', request);
   }
 }

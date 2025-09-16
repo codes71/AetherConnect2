@@ -140,6 +140,34 @@ export class MessageController {
     }
   }
 
+  @GrpcMethod('MessageService', 'CheckRoomMembership')
+  async checkRoomMembership(data: any) {
+    try {
+      logger.info('CheckRoomMembership gRPC call received', {
+        userId: data.userId,
+        roomId: data.roomId,
+      });
+      
+      const result = await this.messageService.checkRoomMembership(data);
+      
+      logger.info('CheckRoomMembership completed', {
+        success: result.success,
+        isMember: result.isMember,
+        roomType: result.roomType
+      });
+      
+      return result;
+    } catch (error) {
+      logger.error('CheckRoomMembership failed', error);
+      return {
+        success: false,
+        isMember: false,
+        message: 'Failed to check room membership',
+        error: error.message,
+      };
+    }
+  }
+
   @GrpcMethod('MessageService', 'HealthCheck')
   async healthCheck() {
     return {
@@ -149,5 +177,22 @@ export class MessageController {
       version: '1.0.0',
       timestamp: new Date().toISOString(),
     };
+  }
+
+  @GrpcMethod('MessageService', 'GetRoomById')
+  async getRoomById(data: { roomId: string }) {
+    try {
+      logger.info('GetRoomById gRPC call received', { roomId: data.roomId });
+      const result = await this.messageService.getRoomById(data.roomId);
+      logger.info('GetRoomById completed', { success: result.success, roomId: result.room?.id });
+      return result;
+    } catch (error) {
+      logger.error('GetRoomById failed:', error);
+      return {
+        success: false,
+        message: 'Failed to get room by ID',
+        error: error.message,
+      };
+    }
   }
 }

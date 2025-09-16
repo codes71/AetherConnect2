@@ -29,7 +29,7 @@ export class HealthService {
   private async checkAuthService(): Promise<{ status: string; latency?: number }> {
     try {
       const start = Date.now();
-      const authClient = new AuthGrpcClient(process.env.AUTH_SERVICE_GRPC_URL || 'localhost:50001');
+      const authClient = new AuthGrpcClient(process.env.AUTH_SERVICE_GRPC_URL );
       await authClient.HealthCheck();
       const latency = Date.now() - start;
 

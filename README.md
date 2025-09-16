@@ -1,4 +1,3 @@
-
 ---
 
 # Run Project: AetherConnect - Advanced Microservices-Based Chat Application
@@ -281,4 +280,3 @@ prometheus: true
 - Extensions: Add WebRTC (video), GraphQL federation, serverless (local Lambda sim).
 
 ---
-

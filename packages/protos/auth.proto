@@ -7,9 +7,11 @@ service AuthService {
   rpc ValidateToken(ValidateTokenRequest) returns (ValidateTokenResponse);
   rpc Login(LoginRequest) returns (AuthResponse);
   rpc RefreshToken(RefreshTokenRequest) returns (AuthResponse);
+  rpc Logout(LogoutRequest) returns (LogoutResponse);
   rpc GetUserProfile(GetUserProfileRequest) returns (UserResponse);
   rpc UpdateUserProfile(UpdateUserProfileRequest) returns (UserResponse);
   rpc HealthCheck(HealthCheckRequest) returns (HealthCheckResponse);
+  rpc GetWebSocketToken(GetWebSocketTokenRequest) returns (GetWebSocketTokenResponse);
 }
 
 message CreateUserRequest {
@@ -34,6 +36,10 @@ message RefreshTokenRequest {
   string refreshToken = 1;
 }
 
+message LogoutRequest {
+  string userId = 1;
+}
+
 message GetUserProfileRequest {
   string userId = 1;
 }
@@ -46,6 +52,10 @@ message UpdateUserProfileRequest {
 }
 
 message HealthCheckRequest {}
+
+message GetWebSocketTokenRequest {
+  string userId = 1;
+}
 
 message UserResponse {
   bool success = 1;
@@ -69,6 +79,19 @@ message AuthResponse {
   optional string accessToken = 4;
   optional string refreshToken = 5;
   optional string error = 6;
+}
+
+message LogoutResponse {
+  bool success = 1;
+  string message = 2;
+  optional string error = 3;
+}
+
+message GetWebSocketTokenResponse {
+  bool success = 1;
+  optional string token = 2;
+  optional string message = 3;
+  optional string error = 4;
 }
 
 message HealthCheckResponse {

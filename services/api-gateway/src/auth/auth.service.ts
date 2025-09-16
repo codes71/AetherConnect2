@@ -10,9 +10,8 @@ export class AuthService implements OnModuleInit {
   private authClient: AuthGrpcClient;
 
   onModuleInit() {
-    const authServiceUrl = process.env.AUTH_SERVICE_GRPC_URL || 'localhost:50001';
+    const authServiceUrl = process.env.AUTH_SERVICE_GRPC_URL
     this.authClient = new AuthGrpcClient(authServiceUrl);
-    logger.info(`Connected to Auth Service at ${authServiceUrl}`);
   }
 
   async register(createUserDto: CreateUserDto) {
@@ -67,6 +66,19 @@ export class AuthService implements OnModuleInit {
     }
   }
 
+  async logout(data: { userId: string }) {
+    try {
+      return await this.authClient.Logout(data);
+    } catch (error) {
+      logger.error('Logout gRPC call failed:', error);
+      return {
+        success: false,
+        message: 'Logout failed',
+        error: 'Internal server error',
+      };
+    }
+  }
+
   async getUserProfile(userId: string) {
     try {
       return await this.authClient.GetUserProfile({ userId });
@@ -91,6 +103,19 @@ export class AuthService implements OnModuleInit {
       return {
         success: false,
         message: 'Failed to update user profile',
+        error: 'Internal server error',
+      };
+    }
+  }
+
+  async getWebSocketToken(userId: string) {
+    try {
+      return await this.authClient.GetWebSocketToken({ userId: parseInt(userId) });
+    } catch (error) {
+      logger.error('GetWebSocketToken gRPC call failed:', error);
+      return {
+        success: false,
+        message: 'Failed to get WebSocket token',
         error: 'Internal server error',
       };
     }

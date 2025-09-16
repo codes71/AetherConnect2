@@ -11,13 +11,11 @@ export class JwtAuthGuard implements CanActivate {
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest();
     
-    const authHeader = request.headers.authorization;
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      logger.warn('No authorization header or invalid format');
+    const token = request.cookies['accessToken'];
+    if (!token) {
+      logger.warn('No access token found in cookies');
       throw new UnauthorizedException('Access token required');
     }
-
-    const token = authHeader.substring(7);
     
     try {
       const result = await this.authService.validateToken(token);
@@ -35,7 +33,7 @@ export class JwtAuthGuard implements CanActivate {
 
       return true;
     } catch (error) {
-      logger.error('Token validation error:', error);
+      logger.error('Token validation error')
       throw new UnauthorizedException('Token validation failed');
     }
   }

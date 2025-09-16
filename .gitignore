@@ -12,6 +12,10 @@ dist/
 build/
 out/
 coverage/
+*.d.ts
+*.js
+*.js.map
+*.tsbuildinfo
 
 # Environment variables
 .env
@@ -36,7 +40,28 @@ packages/*/node_modules/
 packages/*/dist/
 services/*/node_modules/
 services/*/dist/
+
+# Frontend (separate repo)
+apps/
+
+# Documentation and development files
 gRPC.txt
 GEMINI.md
 .gemini
 projectPlans.md
+step.txt
+test.html
+test-client.html
+Overall.md
+messages.json
+backend.txt
+token.md
+AI_CONTEXT.md
+docker-compose.test.yml
+Dockerfile.backend
+
+# Amazon Q CLI
+.amazonq/
+
+# Scripts (if not needed for deployment)
+scripts/

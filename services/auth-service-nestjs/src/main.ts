@@ -1,16 +1,14 @@
+import * as dotenv from "dotenv";
 import { NestFactory } from "@nestjs/core";
 import { MicroserviceOptions, Transport } from "@nestjs/microservices";
 import { join } from "path";
 import { AppModule } from "./app.module";
 import { createServiceLogger } from "@aether/shared";
-import * as dotenv from "dotenv";
 
+dotenv.config({ path: "../../.env" });
 const logger = createServiceLogger("auth-service");
 
-dotenv.config({ path:"../../.env"});
-console.log("Environment Variables:", {
-  POSTGRES_URL: process.env.POSTGRES_URL,
-});
+
 async function bootstrap() {
   try {
     const app = await NestFactory.createMicroservice<MicroserviceOptions>(
@@ -20,7 +18,7 @@ async function bootstrap() {
         options: {
           package: "auth",
           protoPath: join(__dirname, "../../../packages/protos/auth.proto"),
-          url: `0.0.0.0:${process.env.AUTH_SERVICE_GRPC_PORT || 50001}`,
+          url: `0.0.0.0:${process.env.AUTH_SERVICE_GRPC_PORT}`,
           loader: {
             keepCase: true,
             longs: String,
@@ -36,9 +34,6 @@ async function bootstrap() {
 
     const port = process.env.AUTH_SERVICE_GRPC_PORT || 50001;
     logger.info(`🔐 Auth Service (gRPC) is listening on port ${port}`);
-    logger.info(
-      `📋 Proto path: ${join(__dirname, "../../../packages/protos/auth.proto")}`
-    );
 
     // Graceful shutdown
     process.on("SIGTERM", async () => {
