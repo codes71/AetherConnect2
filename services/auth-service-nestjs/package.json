@@ -10,7 +10,8 @@
     "test": "jest",
     "test:watch": "jest --watch",
     "lint": "eslint \"{src,apps,libs,test}/**/*.ts\" --fix",
-    "clean": "rm -rf dist"
+    "clean": "rm -rf dist tsconfig.tsbuildinfo",
+    "cleanmodules": "rm -rf node_modules"
   },
   "dependencies": {
     "@aether/shared": "workspace:*",
@@ -22,7 +23,7 @@
     "@nestjs/jwt": "^11.0.0",
     "@nestjs/microservices": "^11.1.6",
     "@nestjs/typeorm": "^11.0.0",
-    "bcryptjs": "^3.0.2",
+    "bcryptjs": "3.0.2",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.14.2",
     "dotenv": "^17.2.2",

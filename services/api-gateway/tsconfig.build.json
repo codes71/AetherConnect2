@@ -8,6 +8,7 @@
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
     "strictPropertyInitialization": false,
+    "tsBuildInfoFile": "./dist/.tsbuildinfo",
     "paths": {
       "@aether/shared": ["../../packages/shared/dist"]
     }

@@ -9,7 +9,8 @@
     "allowSyntheticDefaultImports": true,
     "strictPropertyInitialization": false,
     "skipLibCheck": true,
-    "downlevelIteration": true
+    "downlevelIteration": true,
+    "tsBuildInfoFile": "./dist/.tsbuildinfo"
   },
   "include": ["src/**/*"],
   "exclude": ["node_modules", "dist"]

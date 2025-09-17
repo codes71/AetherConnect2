@@ -9,7 +9,8 @@
   "scripts": {
     "build": "tsc",
     "dev": "tsc --watch",
-    "clean": "rm -rf dist",
+    "clean": "rm -rf dist tsconfig.tsbuildinfo",
+    "cleanmodules": "rm -rf node_modules",
     "test": "jest",
     "lint": "eslint src/**/*.ts --fix"
   },

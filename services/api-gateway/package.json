@@ -6,6 +6,8 @@
     "build": "pnpm exec nest build",
     "dev": "nest start --watch",
     "start": "node dist/main.js",
+    "clean": "rm -rf dist tsconfig.tsbuildinfo",
+    "cleanmodules": "rm -rf node_modules",
     "test": "jest",
     "lint": "eslint \"{src,apps,libs,test}/**/*.ts\" --fix"
   },
@@ -27,6 +29,7 @@
     "morgan": "^1.10.1",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.2",
+    "dotenv": "17.2.2",
     "cookie-parser": "^1.4.6"
   },
   "devDependencies": {

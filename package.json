@@ -9,6 +9,8 @@
   ],
   "scripts": {
     "dev": "concurrently \"pnpm dev:auth\" \"pnpm dev:gateway\" \"pnpm dev:message\"",
+    "clean": "pnpm -r run clean",
+    "cleanm": "pnpm -r run cleanmodules",
     "start": "concurrently \"pnpm start:auth\" \"pnpm start:gateway\" \"pnpm start:message\"",
     "start:auth": "cd services/auth-service-nestjs && pnpm exec nest start",
     "start:gateway": "cd services/api-gateway && pnpm exec nest start",
