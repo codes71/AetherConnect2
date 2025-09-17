@@ -8,7 +8,7 @@ import { MessageModule } from './message/message.module';
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
-      envFilePath: '../../../.env',
+      envFilePath: '../../.env',
     }),
     AuthModule,
     HealthModule,

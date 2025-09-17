@@ -74,6 +74,7 @@ export class AuthController {
     @Res({ passthrough: true }) res: Response
   ) {
     const result = await this.authService.login(loginDto);
+    logger.info(`"Node ENV is: ${process.env.NODE_ENV}`);
 
     if (result.success && result.accessToken && result.refreshToken) {
       res.cookie("accessToken", result.accessToken, {
@@ -190,7 +191,7 @@ export class AuthController {
     if (result.success && result.token) {
       res.cookie("wsToken", result.token, {
         httpOnly: true,
-        // secure: process.env.NODE_ENV === 'production', // Temporarily removed for debugging
+        secure: process.env.NODE_ENV === 'production', // Temporarily removed for debugging
         sameSite: "lax",
         maxAge: 60 * 1000, // 60 seconds
         path: "/",

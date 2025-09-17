@@ -1,4 +1,3 @@
-import * as dotenv from "dotenv";
 import { NestFactory } from "@nestjs/core";
 import { MicroserviceOptions, Transport } from "@nestjs/microservices";
 import { join } from "path";
@@ -7,7 +6,6 @@ import { createServiceLogger } from "@aether/shared";
 
 const logger = createServiceLogger("auth-service");
 
-dotenv.config({ path: "../../.env" });
 
 async function bootstrap() {
   try {
@@ -32,7 +30,7 @@ async function bootstrap() {
 
     await app.listen();
 
-    const port = process.env.AUTH_SERVICE_GRPC_PORT || 50001;
+    const port = process.env.AUTH_SERVICE_GRPC_PORT;
     logger.info(`🔐 Auth Service (gRPC) is listening on port ${port}`);
 
     // Graceful shutdown
