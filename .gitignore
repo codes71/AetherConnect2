@@ -66,4 +66,5 @@ Last.md
 # Scripts (if not needed for deployment)
 scripts/
 !ecosystem.config.js
+!services/api-gateway/src/types/
 docker-compose.yml
