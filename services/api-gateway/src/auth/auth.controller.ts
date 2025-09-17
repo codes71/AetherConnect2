@@ -44,15 +44,15 @@ export class AuthController {
     if (result.success && result.accessToken && result.refreshToken) {
       res.cookie("accessToken", result.accessToken, {
         httpOnly: true,
-        secure: process.env.NODE_ENV === "production", // Temporarily removed for debugging
-        sameSite: "lax",
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "none",
         maxAge: 15 * 60 * 1000, // 15 minutes
         path: "/",
       });
       res.cookie("refreshToken", result.refreshToken, {
         httpOnly: true,
-        secure: process.env.NODE_ENV === "production", // Temporarily removed for debugging
-        sameSite: "lax",
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "none",
         maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
         path: "/",
       });
@@ -74,20 +74,20 @@ export class AuthController {
     @Res({ passthrough: true }) res: Response
   ) {
     const result = await this.authService.login(loginDto);
-    logger.info(`"Node ENV is: ${process.env.NODE_ENV}`);
+    logger.info(`Node ENV is: ${process.env.NODE_ENV}. Secure cookie set to: ${process.env.NODE_ENV === "production"}`);
 
     if (result.success && result.accessToken && result.refreshToken) {
       res.cookie("accessToken", result.accessToken, {
         httpOnly: true,
-        secure: process.env.NODE_ENV === "production", // Temporarily removed for debugging
-        sameSite: "lax",
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "none",
         maxAge: 15 * 60 * 1000, // 15 minutes
         path: "/",
       });
       res.cookie("refreshToken", result.refreshToken, {
         httpOnly: true,
-        secure: process.env.NODE_ENV === "production", // Temporarily removed for debugging
-        sameSite: "lax",
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "none",
         maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
         path: "/",
       });
