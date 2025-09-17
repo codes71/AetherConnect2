@@ -9,13 +9,15 @@ import {
   OnGatewayInit,
 } from "@nestjs/websockets";
 import { Server, Socket } from "socket.io";
-import { Injectable, Logger } from "@nestjs/common";
+import { Injectable } from "@nestjs/common";
 import { AuthGrpcClient } from "@aether/shared";
 import { MessageService } from "../message/message.service";
 import Redis from "ioredis";
 import { createAdapter } from "@socket.io/redis-adapter";
+import { createServiceLogger } from "@aether/shared";
 
-const logger = new Logger("SocketGateway");
+
+const logger =createServiceLogger("SocketGateway");
 
 interface JoinRoomData {
   roomId: string;
@@ -43,6 +45,9 @@ interface UserRateLimit {
     origin: process.env.FRONTEND_URL || "http://localhost:3004",
     credentials: true,
   },
+  path: '/socket', // Explicitly set the WebSocket path
+  allowEIO3: true, // Allow connections from Socket.IO v2 clients
+  serveClient: false, // Do not serve the client-side Socket.IO library
 })
 export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect, OnGatewayInit {
   @WebSocketServer() server: Server;
@@ -60,39 +65,10 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect, 
   }
 
   afterInit(server: Server) {
-    if (!this.redisInitialized) {
-      this.setupRedisAdapter(server);
-      this.redisInitialized = true;
-    }
+    logger.info(`✅ Socket.IO Gateway initialized and ready to accept connections.`);
+    
   }
 
-  private setupRedisAdapter(server: Server) {
-    const redisUrl = process.env.REDIS_URL || "redis://localhost:6379";
-    try {
-      logger.log(`🔄 Setting up Redis adapter...`);
-      
-      const pubClient = new Redis(redisUrl, {
-        maxRetriesPerRequest: 3,
-        connectTimeout: 10000,
-      });
-
-      pubClient.on('error', (err) => logger.error('❌ Redis PubClient Error', err));
-      pubClient.on('connect', () => logger.log('✅ Redis PubClient Connected'));
-      
-      const subClient = new Redis(redisUrl, {
-        maxRetriesPerRequest: 3,
-        connectTimeout: 10000,
-      });
-
-      subClient.on('error', (err) => logger.error('❌ Redis SubClient Error', err));
-      subClient.on('connect', () => logger.log('✅ Redis SubClient Connected'));
-      
-      server.adapter(createAdapter(pubClient, subClient));
-      logger.log("✅ Redis adapter configured successfully");
-    } catch (error) {
-      logger.error("❌ Failed to configure Redis adapter", error.message);
-    }
-  }
 
   private checkRateLimit(userId: string): boolean {
     const now = Date.now();
@@ -134,7 +110,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect, 
 
   async handleConnection(client: Socket) {
     try {
-      logger.log(`🔌 Client attempting to connect: ${client.id}`);
+      console.log(`🔌 Client attempting to connect: ${client.id}`);
       const token = client.handshake.auth?.token;
       
       if (!token) {
@@ -163,16 +139,16 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect, 
         },
       });
 
-      logger.log(`✅ Client connected successfully: ${client.id} (User: ${authResult.user.username})`);
+      logger.info(`✅ Client connected successfully: ${client.id} (User: ${authResult.user.username})`);
     } catch (error) {
-      logger.error(`💥 Connection error for ${client.id}:`, error.stack);
+      console.error(`💥 Connection error for ${client.id}:`, error.stack);
       client.emit('error', { message: 'Connection failed' });
       client.disconnect();
     }
   }
 
   handleDisconnect(client: Socket) {
-    logger.log(`👋 Client disconnected: ${client.id} (User: ${client.data?.username || "Unknown"})`);
+    logger.info(`👋 Client disconnected: ${client.id} (User: ${client.data?.username || "Unknown"})`);
     
     const userId = client.data?.userId;
     if (userId) {
@@ -196,7 +172,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect, 
         return;
       }
 
-      logger.log(`🏠 User ${client.data.username} attempting to join room: ${data.roomId}`);
+      logger.info(`🏠 User ${client.data.username} attempting to join room: ${data.roomId}`);
       
       const membershipResult = await this.messageService.checkRoomMembership({
         userId: client.data.userId,
@@ -221,7 +197,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect, 
             logger.error(`Failed to auto-join public room ${data.roomId}:`, error);
           });
           
-          logger.log(`🚀 Auto-joining user ${client.data.username} to public room: ${data.roomId}`);
+          logger.info(`🚀 Auto-joining user ${client.data.username} to public room: ${data.roomId}`);
         } else {
           client.emit('error', { 
             message: "You are not a member of this private room",
@@ -232,7 +208,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect, 
       }
 
       await client.join(data.roomId);
-      logger.log(`🎯 Socket joined room: ${data.roomId}`);
+      logger.info(`🎯 Socket joined room: ${data.roomId}`);
 
       // Fire and forget notifications
       client.to(data.roomId).emit("user_joined", {
@@ -246,7 +222,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect, 
         roomId: data.roomId,
       });
 
-      logger.log(`🎉 User ${client.data.username} successfully joined room: ${data.roomId}`);
+      logger.info(`🎉 User ${client.data.username} successfully joined room: ${data.roomId}`);
     } catch (error) {
       logger.error(`Error joining room ${data.roomId}:`, error);
       client.emit('error', { message: 'Failed to join room', context: 'join_room' });
@@ -302,7 +278,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect, 
       };
 
       this.server.to(data.roomId).emit("new_message", optimisticMessage);
-      logger.log(`🚀 Optimistic message broadcasted to room ${data.roomId}`);
+      logger.info(`🚀 Optimistic message broadcasted to room ${data.roomId}`);
 
       // 🔥 Fire and forget - process in background
       this.processMessageAsync(client, data, optimisticMessage).catch(error => {
@@ -376,7 +352,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect, 
     };
 
     this.server.to(data.roomId).emit("message_confirmed", confirmedMessage);
-    logger.log(`✅ Message confirmed and saved: ${messageResult.messageData.id}`);
+    logger.info(`✅ Message confirmed and saved: ${messageResult.messageData.id}`);
   }
 
   @SubscribeMessage("leave_room")
@@ -386,7 +362,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect, 
   ) {
     if (!client.data?.userId) return;
 
-    logger.log(`🚪 User ${client.data.username} leaving room: ${data.roomId}`);
+    logger.info(`🚪 User ${client.data.username} leaving room: ${data.roomId}`);
     await client.leave(data.roomId);
 
     // Fire and forget notifications
@@ -401,7 +377,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect, 
       roomId: data.roomId,
     });
 
-    logger.log(`👋 User ${client.data.username} left room: ${data.roomId}`);
+    logger.info(`👋 User ${client.data.username} left room: ${data.roomId}`);
   }
 
   @SubscribeMessage("typing_start")

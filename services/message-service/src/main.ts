@@ -32,6 +32,7 @@ async function bootstrap() {
     );
 
     // Create HTTP app for Socket.io
+    process.env.DEBUG = 'socket.io*'; // Enable Socket.IO debug logs
     const httpApp = await NestFactory.create(AppModule);
 
     // Enable CORS for Socket.io
@@ -41,7 +42,7 @@ async function bootstrap() {
     });
 
     // Start both services
-    const httpPort = process.env.MESSAGE_SERVICE_HTTP_PORT  // Default to 3001 if not set
+    const httpPort = process.env.MESSAGE_SERVICE_HTTP_PORT || 3001 // Default to 3001 if not set
 
     await Promise.all([grpcApp.listen(), httpApp.listen(httpPort)]);
 

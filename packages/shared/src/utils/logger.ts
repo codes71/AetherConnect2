@@ -1,6 +1,6 @@
 import * as winston from "winston";
 
-const logLevel = "info";
+const logLevel = process.env.LOG_LEVEL || "info";
 const nodeEnv = process.env.NODE_ENV || "development";
 
 const logFormat = winston.format.combine(

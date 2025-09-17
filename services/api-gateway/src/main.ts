@@ -6,13 +6,42 @@ import rateLimit from "express-rate-limit";
 import { AppModule } from "./app.module";
 import { createServiceLogger } from "@aether/shared";
 import morgan from "morgan";
-import cookieParser from 'cookie-parser';
+import cookieParser from "cookie-parser";
+import { createProxyMiddleware } from "http-proxy-middleware";
 
 const logger = createServiceLogger("api-gateway");
 
 async function bootstrap() {
   try {
     const app = await NestFactory.create(AppModule);
+
+    const wsProxy = createProxyMiddleware({
+      target: `http://localhost:3001`,
+      changeOrigin: true,
+      ws: true,
+      logger: logger, // Use logLevel instead of logger
+      pathRewrite: {
+        "^/socket": "/socket", // Ensure path is preserved
+      },
+      on: {
+        proxyReqWs: (proxyReq, req, socket, options, head) => {
+          logger.debug(`[HPM] WebSocket proxy request: ${req.url}`);
+        },
+        proxyRes: (proxyRes, req, res) => {
+          logger.debug(
+            `[HPM] WebSocket proxy response status: ${proxyRes.statusCode} for ${req.url}`
+          );
+        },
+        error: (err, req, res) => {
+          logger.error(
+            `[HPM] WebSocket proxy error for ${req.url}: ${err.message}`
+          );
+        },
+      },
+    });
+
+    // WebSocket Proxy to Message Service
+    app.use("/socket", wsProxy);
 
     // Security middleware
     app.use(helmet());
@@ -26,7 +55,7 @@ async function bootstrap() {
     app.use(
       rateLimit({
         windowMs: 15 * 60 * 1000, // 15 minutes
-        max: 10000, // limit each IP to 100 requests per windowMs
+        max: 100, // limit each IP to 100 requests per windowMs
         message: "Too many requests from this IP, please try again later.",
       })
     );
@@ -61,9 +90,26 @@ async function bootstrap() {
     SwaggerModule.setup("api/docs", app, document);
 
     const port = process.env.API_GATEWAY_PORT;
-    await app.listen(port);
+    const server = await app.listen(port);
+
+    server.on("upgrade", (request, socket, head) => {
+      logger.debug(`[HPM] Upgrade request for: ${request.url}`);
+
+      if (request.url?.startsWith("/socket")) {
+        try {
+          wsProxy.upgrade(request, socket, head);
+        } catch (error) {
+          logger.error("[HPM] Upgrade error:", error.message);
+          socket.destroy();
+        }
+      } else {
+        logger.warn(`[HPM] Rejecting upgrade for: ${request.url}`);
+        socket.destroy();
+      }
+    });
 
     logger.info(`🚀 API Gateway is running on http://localhost:${port}`);
+    logger.info(`Proxying /socket to Message Service at port 3001`);
     logger.info(
       `📚 Swagger docs available at http://localhost:${port}/api/docs`
     );

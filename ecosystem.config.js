@@ -20,7 +20,7 @@ module.exports = {
         ...process.env,
         NODE_ENV: "production",
         GRPC_PORT: process.env.MESSAGE_SERVICE_GRPC_PORT || 50002,
-        HTTP_PORT: process.env.MESSAGE_SERVICE_HTTP_PORT || 3002,
+        HTTP_PORT: process.env.MESSAGE_SERVICE_HTTP_PORT || 3001,
       },
     },
     {
@@ -38,6 +38,7 @@ module.exports = {
       },
       wait_ready: true,
       listen_timeout: 10000,
+      start_delay: 5000,
     },
   ],
 };
