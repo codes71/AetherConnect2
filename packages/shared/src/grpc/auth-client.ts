@@ -37,8 +37,8 @@ export class AuthGrpcClient implements AuthServiceClient {
         address,
         grpc.credentials.createInsecure(),
         {
-          'grpc.keepalive_time_ms': 30000,
-          'grpc.keepalive_timeout_ms': 5000,
+          'grpc.keepalive_time_ms': 60000,
+          'grpc.keepalive_timeout_ms': 20000,
           'grpc.keepalive_permit_without_calls': true,
           'grpc.http2.max_pings_without_data': 0,
           'grpc.http2.min_time_between_pings_ms': 10000,

@@ -37,7 +37,7 @@ message RefreshTokenRequest {
 }
 
 message LogoutRequest {
-  string userId = 1;
+  string refreshToken = 1;
 }
 
 message GetUserProfileRequest {

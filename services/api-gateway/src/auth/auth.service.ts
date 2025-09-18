@@ -66,9 +66,9 @@ export class AuthService implements OnModuleInit {
     }
   }
 
-  async logout(data: { userId: string }) {
+  async logout(refreshToken: string) {
     try {
-      return await this.authClient.Logout(data);
+      return await this.authClient.Logout({ refreshToken });
     } catch (error) {
       logger.error('Logout gRPC call failed:', error);
       return {

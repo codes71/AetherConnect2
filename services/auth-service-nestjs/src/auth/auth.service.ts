@@ -376,8 +376,13 @@ export class AuthService {
     }
   }
 
-  async logout(userId: number) {
+  async logout(refreshToken: string) {
     try {
+      const decoded = this.jwtService.verify(refreshToken, {
+        secret: process.env.JWT_REFRESH_SECRET,
+      });
+      const userId = decoded.userId;
+
       await this.userRepository.update(userId, {
         refreshTokenHash: null,
         refreshTokenExpiresAt: new Date(0),
@@ -390,6 +395,17 @@ export class AuthService {
       };
     } catch (error) {
       logger.error("Logout failed:", error);
+      if (error instanceof TokenExpiredError) {
+        return {
+          success: false,
+          message: "Refresh token has expired",
+        };
+      } else if (error instanceof JsonWebTokenError) {
+        return {
+          success: false,
+          message: "Invalid refresh token signature",
+        };
+      }
       return {
         success: false,
         message: "Logout failed",

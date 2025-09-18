@@ -45,16 +45,16 @@ export class AuthController {
       res.cookie("accessToken", result.accessToken, {
         httpOnly: true,
         secure: process.env.NODE_ENV === "production",
-        sameSite: "none",
-        partitioned: true,
+        sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+        partitioned: process.env.NODE_ENV === 'production',
         maxAge: 15 * 60 * 1000, // 15 minutes
         path: "/",
       });
       res.cookie("refreshToken", result.refreshToken, {
         httpOnly: true,
         secure: process.env.NODE_ENV === "production",
-        sameSite: "none",
-        partitioned: true,
+        sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+        partitioned: process.env.NODE_ENV === 'production',
         maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
         path: "/",
       });
@@ -76,22 +76,26 @@ export class AuthController {
     @Res({ passthrough: true }) res: Response
   ) {
     const result = await this.authService.login(loginDto);
-    logger.info(`Node ENV is: ${process.env.NODE_ENV}. Secure cookie set to: ${process.env.NODE_ENV === "production"}`);
+    logger.info(
+      `Node ENV is: ${process.env.NODE_ENV}. Secure cookie set to: ${
+        process.env.NODE_ENV === "production"
+      }`
+    );
 
     if (result.success && result.accessToken && result.refreshToken) {
       res.cookie("accessToken", result.accessToken, {
         httpOnly: true,
         secure: process.env.NODE_ENV === "production",
-        sameSite: "none",
-        partitioned: true,
+        sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+        partitioned: process.env.NODE_ENV === 'production',
         maxAge: 15 * 60 * 1000, // 15 minutes
         path: "/",
       });
       res.cookie("refreshToken", result.refreshToken, {
         httpOnly: true,
         secure: process.env.NODE_ENV === "production",
-        sameSite: "none",
-        partitioned: true,
+        sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+        partitioned: process.env.NODE_ENV === 'production',
         maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
         path: "/",
       });
@@ -128,14 +132,16 @@ export class AuthController {
       res.cookie("accessToken", result.accessToken, {
         httpOnly: true,
         secure: process.env.NODE_ENV === "production",
-        sameSite: "lax",
+        partitioned: process.env.NODE_ENV === "production",
+        sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
         maxAge: 15 * 60 * 1000, // 15 minutes
         path: "/",
       });
       res.cookie("refreshToken", result.refreshToken, {
         httpOnly: true,
         secure: process.env.NODE_ENV === "production",
-        sameSite: "lax",
+        sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+        partitioned: process.env.NODE_ENV === "production",
         maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
         path: "/",
       });
@@ -147,28 +153,34 @@ export class AuthController {
 
   @Post("logout")
   @HttpCode(HttpStatus.OK)
-  @UseGuards(JwtAuthGuard)
   @ApiOperation({ summary: "Logout user" })
   @ApiResponse({ status: 200, description: "Logout successful" })
   async logout(@Req() req: any, @Res({ passthrough: true }) res: Response) {
     try {
-      // Invalidate refresh token in backend
-      await this.authService.logout({ userId: req.user.userId });
-      
+      const refreshToken = req.cookies["refreshToken"];
+      logger.info(`Logout: Refresh token from cookies: ${refreshToken}`);
+
+      if (refreshToken) {
+        // Invalidate refresh token in backend
+        await this.authService.logout(refreshToken);
+      }
+
       // Clear cookies
       res.clearCookie("accessToken", {
         httpOnly: true,
         secure: process.env.NODE_ENV === "production",
-        sameSite: "lax",
+        sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+        partitioned: process.env.NODE_ENV === "production",
         path: "/",
       });
       res.clearCookie("refreshToken", {
         httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: "lax",
+        secure: process.env.NODE_ENV === "production",
+        sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+        partitioned: process.env.NODE_ENV === "production",
         path: "/",
       });
-      
+
       logger.info("User logged out, tokens invalidated");
       return { success: true, message: "Logged out successfully" };
     } catch (error) {
@@ -195,7 +207,7 @@ export class AuthController {
     if (result.success && result.token) {
       res.cookie("wsToken", result.token, {
         httpOnly: true,
-        secure: process.env.NODE_ENV === 'production', // Temporarily removed for debugging
+        secure: process.env.NODE_ENV === "production", // Temporarily removed for debugging
         sameSite: "lax",
         maxAge: 60 * 1000, // 60 seconds
         path: "/",
