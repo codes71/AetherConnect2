@@ -22,6 +22,7 @@ import { AuthService } from "./auth.service";
 import { JwtAuthGuard } from "./guards/jwt-auth.guard";
 import { CreateUserDto, LoginDto, UpdateUserDto } from "./dto/auth.dto";
 import { createServiceLogger } from "@aether/shared";
+import { setAuthCookie, clearAuthCookie } from "../utils/cookie.util";
 
 const logger = createServiceLogger("auth-controller-gateway");
 
@@ -42,22 +43,8 @@ export class AuthController {
     const result = await this.authService.register(createUserDto);
 
     if (result.success && result.accessToken && result.refreshToken) {
-      res.cookie("accessToken", result.accessToken, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === "production",
-        sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
-        partitioned: process.env.NODE_ENV === 'production',
-        maxAge: 15 * 60 * 1000, // 15 minutes
-        path: "/",
-      });
-      res.cookie("refreshToken", result.refreshToken, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === "production",
-        sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
-        partitioned: process.env.NODE_ENV === 'production',
-        maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-        path: "/",
-      });
+      setAuthCookie(res, "accessToken", result.accessToken, 15 * 60 * 1000); // 15 minutes
+      setAuthCookie(res, "refreshToken", result.refreshToken, 7 * 24 * 60 * 60 * 1000); // 7 days
 
       // Remove tokens from response body
       delete result.accessToken;
@@ -83,22 +70,8 @@ export class AuthController {
     );
 
     if (result.success && result.accessToken && result.refreshToken) {
-      res.cookie("accessToken", result.accessToken, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === "production",
-        sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
-        partitioned: process.env.NODE_ENV === 'production',
-        maxAge: 15 * 60 * 1000, // 15 minutes
-        path: "/",
-      });
-      res.cookie("refreshToken", result.refreshToken, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === "production",
-        sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
-        partitioned: process.env.NODE_ENV === 'production',
-        maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-        path: "/",
-      });
+      setAuthCookie(res, "accessToken", result.accessToken, 15 * 60 * 1000); // 15 minutes
+      setAuthCookie(res, "refreshToken", result.refreshToken, 7 * 24 * 60 * 60 * 1000); // 7 days
 
       // Remove tokens from response body
       delete result.accessToken;
@@ -129,22 +102,8 @@ export class AuthController {
     }
 
     if (result.accessToken && result.refreshToken) {
-      res.cookie("accessToken", result.accessToken, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === "production",
-        partitioned: process.env.NODE_ENV === "production",
-        sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
-        maxAge: 15 * 60 * 1000, // 15 minutes
-        path: "/",
-      });
-      res.cookie("refreshToken", result.refreshToken, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === "production",
-        sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
-        partitioned: process.env.NODE_ENV === "production",
-        maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-        path: "/",
-      });
+      setAuthCookie(res, "accessToken", result.accessToken, 15 * 60 * 1000); // 15 minutes
+      setAuthCookie(res, "refreshToken", result.refreshToken, 7 * 24 * 60 * 60 * 1000); // 7 days
       delete result.accessToken; // Remove from response body
       delete result.refreshToken; // Remove new refresh token from response body
     }
@@ -166,20 +125,8 @@ export class AuthController {
       }
 
       // Clear cookies
-      res.clearCookie("accessToken", {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === "production",
-        sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
-        partitioned: process.env.NODE_ENV === "production",
-        path: "/",
-      });
-      res.clearCookie("refreshToken", {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === "production",
-        sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
-        partitioned: process.env.NODE_ENV === "production",
-        path: "/",
-      });
+      clearAuthCookie(res, "accessToken");
+      clearAuthCookie(res, "refreshToken");
 
       logger.info("User logged out, tokens invalidated");
       return { success: true, message: "Logged out successfully" };
@@ -205,13 +152,7 @@ export class AuthController {
     const result = await this.authService.getWebSocketToken(req.user.userId);
 
     if (result.success && result.token) {
-      res.cookie("wsToken", result.token, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === "production", // Temporarily removed for debugging
-        sameSite: "lax",
-        maxAge: 60 * 1000, // 60 seconds
-        path: "/",
-      });
+      setAuthCookie(res, "wsToken", result.token, 60 * 1000); // 60 seconds
       // Do NOT remove token from response body, as per user's revised plan
     }
     return result;
