@@ -25,6 +25,8 @@ import { createServiceLogger } from "@aether/shared";
 import { setAuthCookie, clearAuthCookie } from "../utils/cookie.util";
 
 const logger = createServiceLogger("auth-controller-gateway");
+const accessTokenExpiry = 15 * 60 * 1000; // 15 minutes
+const refreshTokenExpiry = 7 * 24 * 60 * 60 * 1000; // 7 days
 
 @ApiTags("Authentication")
 @Controller("api/auth")
@@ -43,8 +45,8 @@ export class AuthController {
     const result = await this.authService.register(createUserDto);
 
     if (result.success && result.accessToken && result.refreshToken) {
-      setAuthCookie(res, "accessToken", result.accessToken, 15 * 60 * 1000); // 15 minutes
-      setAuthCookie(res, "refreshToken", result.refreshToken, 7 * 24 * 60 * 60 * 1000); // 7 days
+      setAuthCookie(res, "accessToken", result.accessToken,accessTokenExpiry); // 15 minutes
+      setAuthCookie(res, "refreshToken", result.refreshToken, refreshTokenExpiry); // 7 days
 
       // Remove tokens from response body
       delete result.accessToken;
@@ -70,8 +72,8 @@ export class AuthController {
     );
 
     if (result.success && result.accessToken && result.refreshToken) {
-      setAuthCookie(res, "accessToken", result.accessToken, 15 * 60 * 1000); // 15 minutes
-      setAuthCookie(res, "refreshToken", result.refreshToken, 7 * 24 * 60 * 60 * 1000); // 7 days
+      setAuthCookie(res, "accessToken", result.accessToken,accessTokenExpiry); // 15 minutes
+      setAuthCookie(res, "refreshToken", result.refreshToken, refreshTokenExpiry); // 7 days
 
       // Remove tokens from response body
       delete result.accessToken;
@@ -102,8 +104,8 @@ export class AuthController {
     }
 
     if (result.accessToken && result.refreshToken) {
-      setAuthCookie(res, "accessToken", result.accessToken, 15 * 60 * 1000); // 15 minutes
-      setAuthCookie(res, "refreshToken", result.refreshToken, 7 * 24 * 60 * 60 * 1000); // 7 days
+      setAuthCookie(res, "accessToken", result.accessToken,accessTokenExpiry); // 15 minutes
+      setAuthCookie(res, "refreshToken", result.refreshToken, refreshTokenExpiry); // 7 days
       delete result.accessToken; // Remove from response body
       delete result.refreshToken; // Remove new refresh token from response body
     }
