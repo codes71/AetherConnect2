@@ -75,11 +75,11 @@ async function bootstrap() {
     }
      else 
      if(process.env.FRONTEND_URL) {
-      logger.info(`Setting CORS for: ${process.env.FRONTEND_URL}`);
+      // Remove trailing slash if it exists, for robust matching
+      const sanitizedUrl = process.env.FRONTEND_URL.replace( /\/$/, '' );
+      logger.info(`Setting CORS for: ${sanitizedUrl}`);
       app.enableCors({
-        origin: [
-          process.env.FRONTEND_URL 
-        ],
+        origin: [sanitizedUrl], // Wrap in array to enforce validation
         credentials: true,
       });
     }
