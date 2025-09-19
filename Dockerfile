@@ -18,14 +18,10 @@ RUN cd packages/shared && pnpm run build && ls -la dist/
 
 RUN ls -lR services/
 # Ensure workspace linking works
-RUN cd services/auth-service-nestjs && pnpm build 
-RUN test -f services/auth-service-nestjs/dist/main.js
-RUN cd services/message-service && pnpm build  && test -f dist/main.js
+RUN cd services/auth-service-nestjs && pnpm build && test -f dist/main.js
+RUN cd services/message-service && pnpm build && test -f dist/main.js
 RUN cd services/api-gateway && pnpm build && test -f dist/main.js
 
-# --- DEBUGGING STEP ---
-# List all files to check if build artifacts exist
-# --- END DEBUGGING STEP ---
 
 # Create PM2 ecosystem file and startup script
 COPY ecosystem.config.js ./

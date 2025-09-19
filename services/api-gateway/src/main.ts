@@ -1,4 +1,5 @@
 import { NestFactory } from "@nestjs/core";
+import { NestExpressApplication } from "@nestjs/platform-express";
 import { ValidationPipe } from "@nestjs/common";
 import { DocumentBuilder, SwaggerModule } from "@nestjs/swagger";
 import helmet from "helmet";
@@ -7,13 +8,14 @@ import { AppModule } from "./app.module";
 import { createServiceLogger } from "@aether/shared";
 import morgan from "morgan";
 import cookieParser from "cookie-parser";
+import { Socket } from "net";
 import { createProxyMiddleware } from "http-proxy-middleware";
 
 const logger = createServiceLogger("api-gateway");
 
 async function bootstrap() {
   try {
-    const app = await NestFactory.create(AppModule);
+    const app = await NestFactory.create<NestExpressApplication>(AppModule);
 
     const wsProxy = createProxyMiddleware({
       target: `http://localhost:3001`,
@@ -24,15 +26,15 @@ async function bootstrap() {
         "^/socket": "/socket", // Ensure path is preserved
       },
       on: {
-        proxyReqWs: (proxyReq, req, socket, options, head) => {
+        proxyReqWs: (proxyReq, req) => {
           logger.debug(`[HPM] WebSocket proxy request: ${req.url}`);
         },
-        proxyRes: (proxyRes, req, res) => {
+        proxyRes: (proxyRes, req) => {
           logger.debug(
             `[HPM] WebSocket proxy response status: ${proxyRes.statusCode} for ${req.url}`
           );
         },
-        error: (err, req, res) => {
+        error: (err, req) => {
           logger.error(
             `[HPM] WebSocket proxy error for ${req.url}: ${err.message}`
           );
@@ -45,6 +47,9 @@ async function bootstrap() {
 
     // Security middleware
     app.use(helmet());
+
+    // Trust the proxy to get the correct IP for rate limiting
+    app.set('trust proxy', 1);
 
     app.use(morgan("dev"));
 
@@ -61,13 +66,24 @@ async function bootstrap() {
     );
 
     // CORS
-    app.enableCors({
-      origin: [
-        process.env.FRONTEND_URL || "http://localhost:3004",
-        "http://192.168.1.6:3004", // Add this for local network access if needed
-      ],
-      credentials: true,
-    });
+    if(process.env.NODE_ENV !== 'production') {
+      logger.warn("CORS is wide open for development");
+      app.enableCors({
+        origin: true,
+        credentials: true,
+      });
+    }
+     else 
+     if(process.env.FRONTEND_URL) {
+      logger.info(`Setting CORS for: ${process.env.FRONTEND_URL}`);
+      app.enableCors({
+        origin: [
+          process.env.FRONTEND_URL 
+        ],
+        credentials: true,
+      });
+    }
+   
 
     // Global validation pipe
     app.useGlobalPipes(
@@ -97,7 +113,7 @@ async function bootstrap() {
 
       if (request.url?.startsWith("/socket")) {
         try {
-          wsProxy.upgrade(request, socket, head);
+          wsProxy.upgrade(request, socket as Socket, head);
         } catch (error) {
           logger.error("[HPM] Upgrade error:", error.message);
           socket.destroy();

@@ -123,10 +123,10 @@ export class AuthController {
   }
 
   @GrpcMethod("AuthService", "Logout")
-  async logout(data: any) {
+  async logout(data: { refreshToken: string }) {
     try {
-      logger.info("Logout gRPC call received", { userId: data.userId });
-      const result = await this.authService.logout(data.userId);
+      logger.info("Logout gRPC call received");
+      const result = await this.authService.logout(data.refreshToken);
       logger.info("Logout completed", { success: result.success });
       return result;
     } catch (error) {

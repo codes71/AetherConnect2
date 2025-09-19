@@ -39,4 +39,4 @@ services:
       - key: MESSAGE_SERVICE_GRPC_URL
         value: localhost:50002
       - key: FRONTEND_URL
-        value: https://aetherconnect.onrender.com
+        value: https://aether-connect.vercel.app
