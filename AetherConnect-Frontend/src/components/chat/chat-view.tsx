@@ -146,9 +146,9 @@ export function ChatView({ conversationId }: ChatViewProps) {
   }
 
   return (
-    <div className="flex flex-col h-screen">
+    <div className="flex flex-col h-screen bg-gradient-to-b from-background to-muted/20">
       {/* Fixed Header */}
-      <div className="shrink-0">
+      <div className="shrink-0 animate-fade-in">
         <ChatHeader room={room} />
       </div>
       

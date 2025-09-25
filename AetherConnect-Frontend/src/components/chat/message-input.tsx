@@ -149,12 +149,12 @@ export function MessageInput({
     <div
       className={cn(
         "border rounded-lg bg-background transition-colors",
-        isFocused && "border-primary/20 shadow-sm"
+        isFocused && "ring-primary/20 shadow-sm border-primary/50"
       )}
     >
       {/* Smart Reply Suggestions - Expand container */}
       {showSmartReplies && (
-        <div className="px-4 pt-3 pb-2 border-b">
+        <div className="px-4 pt-3 pb-2 border-b animate-fade-in-up">
           <div className="flex gap-2 flex-wrap">
             {smartReplies.slice(0, 3).map((reply, index) => (
               <Button
@@ -162,7 +162,7 @@ export function MessageInput({
                 variant="outline"
                 size="sm"
                 onClick={() => handleSmartReply(reply)}
-                className="text-sm py-1 px-3 rounded-full hover:bg-primary hover:text-primary-foreground transition-colors"
+                className="text-sm py-1 px-3 rounded-full hover:bg-primary hover:text-primary-foreground transition-colors animate-ripple"
                 disabled={isLoadingReplies}
               >
                 {reply}
@@ -190,7 +190,10 @@ export function MessageInput({
           type="submit"
           size="sm"
           disabled={!hasContent || isSending}
-          className="shrink-0"
+          className={cn(
+            "shrink-0 animate-ripple hover:animate-pulse transition-transform duration-200",
+            isSending && "rotate-180"
+          )}
         >
           {isSending ? (
             <Loader2 className="h-4 w-4 animate-spin" />

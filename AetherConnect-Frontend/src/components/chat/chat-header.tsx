@@ -35,7 +35,7 @@ export function ChatHeader({ room }: { room: Room }) {
   const typingArray = Array.from(typingUsers);
 
   return (
-    <div className="flex h-16 items-center border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 px-4 shrink-0">
+    <div className="flex h-16 items-center border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 px-4 shrink-0 animate-fade-in">
       <SidebarTrigger className="md:hidden mr-3" />
       
       <Avatar className="h-10 w-10 mr-4 ring-2 ring-background shadow-sm">
@@ -46,7 +46,7 @@ export function ChatHeader({ room }: { room: Room }) {
       
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2">
-          <span className="font-semibold truncate text-base">{displayName}</span>
+          <span className="font-semibold truncate text-base animate-fade-in">{displayName}</span>
           <ConnectionIcon 
             className={cn(
               "h-4 w-4",

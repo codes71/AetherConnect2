@@ -1,4 +1,5 @@
 import { ReactNode } from 'react'
+import { cn } from '@/lib/utils';
 import {
   Sidebar,
   SidebarContent,
@@ -67,7 +68,7 @@ export function ChatAppShell({
         variant={isMobile ? 'floating' : 'sidebar'}
       >
         <SidebarContent>
-          <SidebarHeader className="border-b p-4">
+          <SidebarHeader className="border-b p-4 text-white">
             <div className="flex w-full items-center justify-between mb-3">
               <div className="flex items-center gap-2">
                 <Logo />
@@ -76,8 +77,8 @@ export function ChatAppShell({
               {isMobile && <SidebarTrigger />}
             </div>
             <div className="relative">
-              <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-              <Input placeholder="Search conversations..." className="pl-10 h-10" />
+              <Search className="absolute left-3 top-3 h-4 w-4 text-white/80" />
+              <Input placeholder="Search conversations..." className="pl-10 h-10 bg-white/10 text-white placeholder-white/70 border-white/20" />
             </div>
           </SidebarHeader>
 
@@ -88,14 +89,17 @@ export function ChatAppShell({
                 <SidebarMenuItem key={room.id} className="relative" onClick={() => setSelectedRoomId(room.id)}>
                     <SidebarMenuButton
                       isActive={isActive}
-                      className="justify-start h-auto py-4 px-3 rounded-lg"
+                      className={cn(
+                        "justify-start h-auto py-4 px-3 rounded-lg transition-all duration-200",
+                        isActive && "ring-2 ring-primary/30 shadow-md"
+                      )}
                       tooltip={{
                         children: room.name,
                         side: 'right',
                         align: 'center',
                       }}
                     >
-                      <Avatar className="h-12 w-12 shrink-0">
+                      <Avatar className="h-12 w-12 shrink-0 hover:scale-105 transition-transform duration-200">
                         <AvatarFallback className="text-sm font-medium">
                           {room.name.substring(0, 2).toUpperCase()}
                         </AvatarFallback>
@@ -124,7 +128,7 @@ export function ChatAppShell({
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" className="w-full justify-start gap-2 px-2">
-                    <Avatar className="h-8 w-8">
+                    <Avatar className="h-8 w-8 hover:scale-105 transition-transform duration-200">
                         <AvatarImage src={undefined} alt={name} />
                         <AvatarFallback>{initials}</AvatarFallback>
                     </Avatar>

@@ -49,7 +49,7 @@ export function MessageList({
     
     switch (message.status) {
       case 'sending':
-        return <Clock className="h-3 w-3 text-muted-foreground animate-pulse" />;
+        return <Clock className="h-3 w-3 text-muted-foreground animate-spin-slow" />;
       case 'sent':
         return <Check className="h-3 w-3 text-muted-foreground" />;
       case 'confirmed':
@@ -117,7 +117,7 @@ export function MessageList({
     return (
       <div className="flex items-center justify-center h-full text-muted-foreground">
         <div className="text-center animate-fade-in">
-          <div className="text-6xl mb-4 opacity-50">💬</div>
+          <div className="text-6xl mb-4 opacity-50 animate-bounce-subtle">💬</div>
           <p className="text-lg font-medium">No messages yet</p>
           <p className="text-sm">Be the first to say hello!</p>
         </div>
@@ -188,7 +188,7 @@ export function MessageList({
                     {!isOwn && (
                       <div className="flex-shrink-0">
                         {showAvatar ? (
-                          <Avatar className="h-8 w-8 transition-transform duration-200 hover:scale-105">
+                          <Avatar className="h-8 w-8 transition-transform duration-200 hover:scale-105 hover:rotate-3">
                             <AvatarFallback className="text-xs bg-muted">
                               {getInitials(message.username)}
                             </AvatarFallback>
@@ -214,10 +214,10 @@ export function MessageList({
                       {/* Message content */}
                       <div
                         className={cn(
-                          'px-4 py-3 rounded-2xl break-words transition-all duration-200 hover:shadow-md max-w-sm',
+                          'px-4 py-3 rounded-2xl break-words transition-all duration-200 hover:shadow-lg ring-1 ring-primary/10 max-w-sm',
                           isOwn
-                            ? 'bg-primary text-primary-foreground rounded-br-md ml-auto'
-                            : 'bg-card text-card-foreground rounded-bl-md border shadow-sm',
+                            ? 'bg-gradient-to-r from-primary to-primary/80 text-primary-foreground rounded-br-md ml-auto shadow-lg'
+                            : 'bg-gradient-to-r from-muted to-card text-card-foreground rounded-bl-md border shadow-sm',
                           message.status === 'sending' && 'opacity-70 animate-pulse',
                           message.status === 'failed' && 'bg-destructive/10 border-destructive/20 text-destructive'
                         )}
