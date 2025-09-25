@@ -46,6 +46,8 @@ services/*/node_modules/
 services/*/dist/
 AetherConnect-Frontend/node_modules/
 AetherConnect-Frontend/.next/
+AetherConnect-Frontend/.env/
+AetherConnect-Frontend/docs
 AetherConnect-Frontend/.vercel/
 
 # Dependency locks (pnpm preferred)
