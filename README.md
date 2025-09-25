@@ -27,6 +27,14 @@ AetherConnect demonstrates **senior-level backend engineering** through a scalab
 - **Authentication**: JWT + bcrypt with refresh token rotation
 - **Validation**: Zod schemas with comprehensive error handling
 
+### **Frontend**
+- **Framework**: Next.js 14 with TypeScript and App Router
+- **UI Components**: shadcn/ui library
+- **Styling**: Tailwind CSS
+- **State Management**: React Context for authentication, rooms, and sockets
+- **Real-time**: WebSocket integration for chat functionality
+- **Deployment**: Hosted on Vercel - https://aether-connect.vercel.app/
+
 ### **Databases & Storage**
 - **PostgreSQL**: User data, authentication (ACID compliance)
 - **MongoDB**: Messages, chat history (document flexibility)
@@ -65,6 +73,7 @@ AetherConnect demonstrates **senior-level backend engineering** through a scalab
 
 ```
 aetherconnect/
+├── AetherConnect-Frontend/   # Next.js Frontend Application (Vercel: https://aether-connect.vercel.app/)
 ├── services/
 │   ├── api-gateway/          # HTTP API Gateway (NestJS)
 │   ├── auth-service-nestjs/  # Authentication Service

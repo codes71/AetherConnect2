@@ -1,4 +1,4 @@
 packages:
   - 'services/*'
   - 'packages/*'
-  - 'apps/*'
+  - 'AetherConnect-Frontend'

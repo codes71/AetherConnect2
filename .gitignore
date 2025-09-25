@@ -11,6 +11,7 @@ pnpm-debug.log*
 dist/
 build/
 out/
+.next/
 coverage/
 *.d.ts
 *.js
@@ -23,6 +24,8 @@ coverage/
 .env.development.local
 .env.test.local
 .env.production.local
+.env*
+genkit/
 
 # IDEs and editors
 .vscode/
@@ -34,15 +37,30 @@ coverage/
 # OS generated files
 .DS_Store
 Thumbs.db
+*.pem
 
 # Specific to this project's structure
 packages/*/node_modules/
 packages/*/dist/
 services/*/node_modules/
 services/*/dist/
+AetherConnect-Frontend/node_modules/
+AetherConnect-Frontend/.next/
+AetherConnect-Frontend/.vercel/
 
-# Frontend (separate repo)
-apps/
+# Dependency locks (pnpm preferred)
+package-lock.json
+yarn.lock
+npm-shrinkwrap.json
+
+# Yarn/PNP (if not using)
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/versions
+.pnp
+.pnp.*
 
 # Documentation and development files
 gRPC.txt
@@ -60,11 +78,15 @@ AI_CONTEXT.md
 Dockerfile.backend
 Last.md
 
+# Firebase/Genkit debug
+firebase-debug.log
+firestore-debug.log
+env.example
+
 # Amazon Q CLI
 .amazonq/
 
 # Scripts (if not needed for deployment)
-scripts/
 !ecosystem.config.js
 !services/api-gateway/src/types/
 docker-compose.yml
