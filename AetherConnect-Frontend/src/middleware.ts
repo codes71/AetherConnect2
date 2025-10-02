@@ -1,13 +1,22 @@
-import { NextResponse } from "next/server";
+import { NextResponse } from 'next/server';
+import type { NextRequest } from 'next/server';
+import { logger } from './lib/utils';
+export function middleware(request: NextRequest) {
+  const token = request.cookies.get('accessToken')?.value; // Assume backend sets 'auth-token' cookie
+  const isAuthenticated = !!token;
 
-// This middleware is now simplified to remove authentication checks.
-// The client-side AuthProvider is responsible for handling routing based on auth state.
-export function middleware() {
+  const protectedPaths = ['/chat', '/profile'];
+  const isProtectedPath = protectedPaths.some(path => request.nextUrl.pathname.startsWith(path));
+
+  // Temporarily disabled for testing
+  if (isProtectedPath && !isAuthenticated) {
+    logger.log("Middleware: Unauthenticated access to protected route, redirecting to /login");
+    return NextResponse.redirect(new URL('/login', request.url));
+  }
+
   return NextResponse.next();
 }
 
 export const config = {
-  // We no longer need to match all these routes for auth checks.
-  // This can be adjusted if other middleware logic is added later.
-  matcher: [],
+  matcher: ['/chat/:path*', '/profile/:path*'],
 };

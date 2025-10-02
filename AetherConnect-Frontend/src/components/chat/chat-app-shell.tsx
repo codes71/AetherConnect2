@@ -34,17 +34,17 @@ import {
   LogOut,
   ChevronDown,
 } from 'lucide-react';
-import { useAuth } from '@/context/auth-context';
 import { useRooms } from '@/context/room-context';
 import { useSelectedRoom } from '@/context/selected-room-context';
 
+import useAuthStore from '@/store/authStore';
 export function ChatAppShell({
   children,
 }: {
   children: ReactNode;
 }) {
   const { isMobile } = useSidebar();
-  const { user, logout, isLoading: isAuthLoading } = useAuth();
+  const { user, logout, isLoading: isAuthLoading } = useAuthStore();
   const { rooms, isLoading: areRoomsLoading } = useRooms();
   const { selectedRoomId, setSelectedRoomId } = useSelectedRoom();
 

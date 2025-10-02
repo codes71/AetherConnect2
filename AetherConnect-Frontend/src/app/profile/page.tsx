@@ -1,9 +1,9 @@
 'use client';
 
-import { useAuth } from '@/context/auth-context';
+import  useAuthStore  from '@/store/authStore';
 
 export default function Profile() {
-  const { user, isLoading } = useAuth();
+  const { user, isLoading } = useAuthStore();
 
   if (isLoading) return <div className="p-6">Loading...</div>;
   if (!user) return <div className="p-6">User not found</div>;

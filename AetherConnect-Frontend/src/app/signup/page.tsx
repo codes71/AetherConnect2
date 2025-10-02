@@ -15,7 +15,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Logo } from '@/components/logo';
-import { useAuth } from '@/context/auth-context';
+import useAuthStore from '@/store/authStore';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 
@@ -30,7 +30,7 @@ const signupSchema = z.object({
 type SignupData = z.infer<typeof signupSchema>;
 
 export default function SignupPage() {
-  const { register: registerUser, isAuthenticated } = useAuth();
+  const { register: registerUser, isAuthenticated } = useAuthStore();
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const {

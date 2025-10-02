@@ -4,7 +4,8 @@ import { useEffect, useRef, useState, useCallback } from "react";
 import * as React from "react";
 import { io, Socket } from "socket.io-client";
 import { Message } from "@/lib/types";
-import { useAuth } from "@/context/auth-context";
+import  useAuthStore from '@/store/authStore';
+
 import { useToast } from "@/hooks/use-toast";
 import { ToastAction } from "@/components/ui/toast";
 import { logger } from "@/lib/utils";
@@ -25,7 +26,7 @@ interface SocketError extends Error {
 }
 
 export const useSocket = () => {
-  const { isAuthenticated, user } = useAuth();
+  const { user, isAuthenticated } = useAuthStore();
   const { toast } = useToast();
 
   const socketRef = useRef<Socket | null>(null);

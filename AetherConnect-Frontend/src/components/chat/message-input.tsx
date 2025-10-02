@@ -6,7 +6,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Send, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useSocketContext } from "@/context/socket-context";
-import { useAuth } from "@/context/auth-context";
+import  useAuthStore  from '@/store/authStore';
+
 import { useMessageHistory } from "@/hooks/use-message-history";
 
 interface MessageInputProps {
@@ -19,7 +20,8 @@ export function MessageInput({
   lastMessage,
 }: MessageInputProps) {
   const { actions } = useSocketContext();
-  const { user } = useAuth();
+  const { user } = useAuthStore
+();
   const { historyMessages } = useMessageHistory(conversationId);
   const [content, setContent] = useState("");
   const [isSending, setIsSending] = useState(false);

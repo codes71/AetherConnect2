@@ -11,7 +11,7 @@ import {
 } from "react";
 import api from "@/api/api";
 import { Room } from "@/lib/types";
-import { useAuth } from "./auth-context";
+import useAuthStore from "@/store/authStore";
 import { enhancedApiCall } from "@/api/api-helpers";
 
 interface RoomContextType {
@@ -24,7 +24,7 @@ interface RoomContextType {
 const RoomContext = createContext<RoomContextType | undefined>(undefined);
 
 export function RoomProvider({ children }: { children: ReactNode }) {
-  const { user } = useAuth();
+  const { user } = useAuthStore();
   const [rooms, setRooms] = useState<Room[]>([]);
   const roomsRef = useRef(rooms);
   roomsRef.current = rooms;

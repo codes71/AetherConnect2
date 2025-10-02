@@ -4,9 +4,20 @@
 import { ChatView } from '@/components/chat/chat-view';
 import { useSelectedRoom } from '@/context/selected-room-context';
 import { MessageSquare } from 'lucide-react';
+import { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import useAuthStore from '@/store/authStore';
 
 export default function ChatPage() {
   const { selectedRoomId } = useSelectedRoom();
+  const { isAuthenticated } = useAuthStore();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (!isAuthenticated) {
+      router.push('/login');
+    }
+  }, [isAuthenticated, router]);
 
   if (!selectedRoomId) {
     return (
