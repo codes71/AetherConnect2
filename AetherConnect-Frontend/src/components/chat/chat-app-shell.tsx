@@ -35,6 +35,7 @@ import {
   ChevronDown,
 } from 'lucide-react';
 import { useRooms } from '@/context/room-context';
+import { useRouter } from 'next/navigation';
 import { useSelectedRoom } from '@/context/selected-room-context';
 
 import useAuthStore from '@/store/authStore';
@@ -47,6 +48,7 @@ export function ChatAppShell({
   const { user, logout, isLoading: isAuthLoading } = useAuthStore();
   const { rooms, isLoading: areRoomsLoading } = useRooms();
   const { selectedRoomId, setSelectedRoomId } = useSelectedRoom();
+  const router = useRouter();
 
   if (isAuthLoading || areRoomsLoading) {
     return <div>Loading...</div>;
@@ -152,7 +154,7 @@ export function ChatAppShell({
                     {/* <Link href="/chat/settings"><Settings className="mr-2 h-4 w-4" /><span>Settings</span></Link> */}
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={logout}>
+                <DropdownMenuItem onClick={() => logout({ redirect: true, routerPush: router.push })}>
                   <LogOut className="mr-2 h-4 w-4" /><span>Log out</span>
                 </DropdownMenuItem>
               </DropdownMenuContent>
