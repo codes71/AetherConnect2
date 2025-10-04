@@ -33,7 +33,7 @@ services:
       - key: MESSAGE_SERVICE_GRPC_PORT
         value: 50002
       - key: MESSAGE_SERVICE_HTTP_PORT
-        value: 3002
+        value: 3001
       - key: AUTH_SERVICE_GRPC_URL
         value: localhost:50001
       - key: MESSAGE_SERVICE_GRPC_URL

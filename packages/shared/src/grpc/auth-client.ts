@@ -20,8 +20,16 @@ export interface AuthServiceClient {
 export class AuthGrpcClient implements AuthServiceClient {
   private client: any;
   private readonly serviceName = 'AuthService';
+  private address: string;
+  private maxRetries: number = 3;
+  private retryDelay: number = 1000;
 
   constructor(address: string = 'localhost:50001') {
+    this.address = address;
+    this.initializeClient();
+  }
+
+  private initializeClient() {
     try {
       const packageDefinition = protoLoader.loadSync(PROTO_PATH, {
         keepCase: true,
@@ -32,9 +40,9 @@ export class AuthGrpcClient implements AuthServiceClient {
       });
 
       const authProto = grpc.loadPackageDefinition(packageDefinition) as any;
-      
+
       this.client = new authProto.auth.AuthService(
-        address,
+        this.address,
         grpc.credentials.createInsecure(),
         {
           'grpc.keepalive_time_ms': 60000,
@@ -46,11 +54,40 @@ export class AuthGrpcClient implements AuthServiceClient {
         }
       );
 
-      logger.info(`gRPC client connected to ${this.serviceName} at ${address}`);
+      logger.info(`gRPC client connected to ${this.serviceName} at ${this.address}`);
     } catch (error) {
       logger.error(`Failed to initialize gRPC client for ${this.serviceName}:`, error);
       throw error;
     }
+  }
+
+  private async promisifyCallWithRetry(method: string, request: any, retryCount: number = 0): Promise<any> {
+    return new Promise((resolve, reject) => {
+      const call = this.client[method](request, async (error: any, response: any) => {
+        if (error) {
+          // Check if it's a connection error and we haven't exceeded max retries
+          if (error.code === grpc.status.UNAVAILABLE && retryCount < this.maxRetries) {
+            logger.warn(`${method} failed (attempt ${retryCount + 1}/${this.maxRetries + 1}), retrying in ${this.retryDelay}ms...`, error.message);
+
+            setTimeout(async () => {
+              try {
+                const result = await this.promisifyCallWithRetry(method, request, retryCount + 1);
+                resolve(result);
+              } catch (retryError) {
+                reject(retryError);
+              }
+            }, this.retryDelay);
+
+            return;
+          }
+
+          logger.error(`gRPC ${method} error:`, error);
+          reject(error);
+        } else {
+          resolve(response);
+        }
+      });
+    });
   }
 
   private promisifyCall(method: string, request: any): Promise<any> {
@@ -67,38 +104,38 @@ export class AuthGrpcClient implements AuthServiceClient {
   }
 
   async CreateUser(request: any): Promise<any> {
-    return this.promisifyCall('CreateUser', request);
+    return this.promisifyCallWithRetry('CreateUser', request);
   }
 
   async ValidateToken(request: any): Promise<any> {
-    return this.promisifyCall('ValidateToken', request);
+    return this.promisifyCallWithRetry('ValidateToken', request);
   }
 
   async Login(request: any): Promise<any> {
-    return this.promisifyCall('Login', request);
+    return this.promisifyCallWithRetry('Login', request);
   }
 
   async RefreshToken(request: any): Promise<any> {
-    return this.promisifyCall('RefreshToken', request);
+    return this.promisifyCallWithRetry('RefreshToken', request);
   }
 
   async Logout(request: any): Promise<any> {
-    return this.promisifyCall('Logout', request);
+    return this.promisifyCallWithRetry('Logout', request);
   }
 
   async GetUserProfile(request: any): Promise<any> {
-    return this.promisifyCall('GetUserProfile', request);
+    return this.promisifyCallWithRetry('GetUserProfile', request);
   }
 
   async UpdateUserProfile(request: any): Promise<any> {
-    return this.promisifyCall('UpdateUserProfile', request);
+    return this.promisifyCallWithRetry('UpdateUserProfile', request);
   }
 
   async HealthCheck(request: any = {}): Promise<any> {
-    return this.promisifyCall('HealthCheck', request);
+    return this.promisifyCallWithRetry('HealthCheck', request);
   }
 
   async GetWebSocketToken(request: any): Promise<any> { // New method
-    return this.promisifyCall('GetWebSocketToken', request);
+    return this.promisifyCallWithRetry('GetWebSocketToken', request);
   }
 }

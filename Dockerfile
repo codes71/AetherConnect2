@@ -9,8 +9,9 @@ COPY package.json pnpm-lock.yaml pnpm-workspace.yaml tsconfig.json ./
 COPY packages ./packages
 COPY services ./services
 
-# Install pnpm and dependencies
+# Install pnpm, pm2, and netcat for health checks
 RUN npm install -g pnpm pm2
+RUN apk add --no-cache netcat-openbsd
 RUN pnpm install --frozen-lockfile
 
 # Build all services

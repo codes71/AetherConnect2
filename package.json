@@ -9,6 +9,7 @@
     "AetherConnect-Frontend"
   ],
   "scripts": {
+    "lint": "next lint",
     "dev": "concurrently \"pnpm dev:auth\" \"pnpm dev:gateway\" \"pnpm dev:message\"",
     "clean": "pnpm -r run clean",
     "cleanm": "pnpm -r run cleanmodules",
