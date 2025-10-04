@@ -22,6 +22,8 @@
     "dev:message": "cd services/message-service && pnpm exec nest start --watch",
     "dev:frontend": "cd AetherConnect-Frontend && pnpm dev",
     "build": "pnpm -r run build",
+    "build:frontend": "cd AetherConnect-Frontend && pnpm build",
+    "build:backend": "pnpm --filter './services/**' run build",
     "docker:build": "docker build -t aetherconnect .",
     "docker:up": "docker-compose -f docker-compose.yml up -d",
     "docker:up:auth": "docker run -d -p 3001:3001 --name aether-auth-test aether-auth",
@@ -42,6 +44,7 @@
     "host:monitor": "pnpm docker:logs"
   },
   "devDependencies": {
-    "concurrently": "^9.2.1"
+    "concurrently": "^9.2.1",
+    "eslint-plugin-nestjs": "^1.2.3"
   }
 }

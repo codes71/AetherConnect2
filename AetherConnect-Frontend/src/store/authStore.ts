@@ -52,7 +52,7 @@ const createAuthSlice: StateCreator<AuthState, [], [], AuthState> = (set) => ({
     logger.log("🔍 Loading user session...");
     set({ isLoading: true });
 
-    const { success, data } = await enhancedApiCall({
+    const { success, data, error } = await enhancedApiCall({
       apiCall: api.auth.getProfile(),
       errorContext: "auth-profile-initial",
       suppressErrorToast: true,
@@ -63,6 +63,15 @@ const createAuthSlice: StateCreator<AuthState, [], [], AuthState> = (set) => ({
       logger.log("✅ User session loaded successfully");
     } else {
       set({ user: null, isAuthenticated: false });
+      // Dispatch auth error event to trigger logout and redirect
+      if (error?.code === 'UNAUTHORIZED') {
+        if (typeof window !== "undefined") {
+          const event = new CustomEvent('auth:session-expired', {
+            detail: { message: 'Session expired. Please log in again.', error }
+          });
+          window.dispatchEvent(event);
+        }
+      }
     }
     set({ isLoading: false });
   },

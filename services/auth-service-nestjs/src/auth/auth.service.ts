@@ -3,7 +3,7 @@ import { TokenExpiredError, JsonWebTokenError } from "@nestjs/jwt";
 import { InjectRepository } from "@nestjs/typeorm";
 import { Repository } from "typeorm";
 import { JwtService } from "@nestjs/jwt";
-import * as bcrypt from "bcryptjs";
+import * as bcrypt from "bcrypt";
 import { User } from "../users/entities/user.entity";
 import { createServiceLogger } from "@aether/shared";
 
