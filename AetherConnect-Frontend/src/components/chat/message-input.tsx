@@ -145,65 +145,85 @@ export function MessageInput({
   };
 
   const hasContent = content.trim().length > 0;
-  const showSmartReplies = smartReplies.length > 0 && !hasContent;
+  const showSmartReplies = smartReplies.length > 0 && !hasContent && !isLoadingReplies;
+  const showLoadingIndicator = isLoadingReplies && !hasContent;
 
   return (
-    <div
-      className={cn(
-        "border rounded-lg bg-background transition-colors",
-        isFocused && "ring-primary/20 shadow-sm border-primary/50"
-      )}
-    >
-      {/* Smart Reply Suggestions - Expand container */}
-      {showSmartReplies && (
-        <div className="px-4 pt-3 pb-2 border-b animate-fade-in-up">
-          <div className="flex gap-2 flex-wrap">
-            {smartReplies.slice(0, 3).map((reply, index) => (
-              <Button
-                key={index}
-                variant="outline"
-                size="sm"
-                onClick={() => handleSmartReply(reply)}
-                className="text-sm py-1 px-3 rounded-full hover:bg-primary hover:text-primary-foreground transition-colors animate-ripple"
-                disabled={isLoadingReplies}
-              >
-                {reply}
-              </Button>
-            ))}
-          </div>
-        </div>
-      )}
-
-      <form onSubmit={handleSubmit} className="flex items-end gap-2 p-4">
-        <div className="flex-1">
-          <Textarea
-            ref={textareaRef}
-            value={content}
-            onChange={handleChange}
-            onKeyDown={handleKeyDown}
-            onFocus={() => setIsFocused(true)}
-            onBlur={() => setIsFocused(false)}
-            placeholder={`Message as ${user?.username || "User"}...`}
-            className="min-h-[44px] max-h-32 resize-none border-0 p-0 focus-visible:ring-0 focus-visible:ring-offset-0"
-            rows={1}
-          />
-        </div>
-        <Button
-          type="submit"
-          size="sm"
-          disabled={!hasContent || isSending}
+    <div className="relative">
+      {/* Fixed height container to prevent layout shifts */}
+      <div className="h-16">
+        <div
           className={cn(
-            "shrink-0 animate-ripple hover:animate-pulse transition-transform duration-200",
-            isSending && "rotate-180"
+            "border rounded-lg bg-background transition-colors h-full",
+            isFocused && "ring-primary/20 shadow-sm border-primary/50"
           )}
         >
-          {isSending ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
+          <form onSubmit={handleSubmit} className="flex items-start gap-2 p-4 h-full">
+            <div className="flex-1">
+              <Textarea
+                ref={textareaRef}
+                value={content}
+                onChange={handleChange}
+                onKeyDown={handleKeyDown}
+                onFocus={() => setIsFocused(true)}
+                onBlur={() => setIsFocused(false)}
+                placeholder={`Message as ${user?.username || "User"}...`}
+                className="min-h-[44px] max-h-32 resize-none border-0 p-0 focus-visible:ring-0 focus-visible:ring-offset-0"
+                rows={1}
+              />
+            </div>
+            <Button
+              type="submit"
+              size="sm"
+              disabled={!hasContent || isSending}
+              className={cn(
+                "shrink-0 animate-ripple hover:animate-pulse transition-transform duration-200",
+                isSending && "rotate-180"
+              )}
+            >
+              {isSending ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Send className="h-4 w-4" />
+              )}
+            </Button>
+          </form>
+        </div>
+      </div>
+
+      {/* Loading indicator or Smart Reply Suggestions */}
+      {(showLoadingIndicator || showSmartReplies) && (
+        <div className="mt-2 animate-fade-in-up px-4 pb-4">
+          {showLoadingIndicator ? (
+            <div className=" animate-slide-in-up">
+              <div className="flex gap-2 items-center">
+                <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />
+                <span className="text-xs text-muted-foreground">Generating suggestions...</span>
+              </div>
+            </div>
           ) : (
-            <Send className="h-4 w-4" />
+            <div className=" animate-slide-in-up">
+              <div className="flex gap-2 items-center overflow-x-auto">
+                <span className="text-xs text-muted-foreground mr-2 shrink-0">Quick replies:</span>
+                <div className="flex gap-2 flex-nowrap">
+                  {smartReplies.slice(0, 3).map((reply, index) => (
+                    <Button
+                      key={index}
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleSmartReply(reply)}
+                      className="text-xs py-1 px-2 rounded-full hover:bg-primary hover:text-primary-foreground transition-colors animate-ripple h-7"
+                      disabled={isLoadingReplies}
+                    >
+                      {reply.length > 20 ? `${reply.substring(0, 20)}...` : reply}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+            </div>
           )}
-        </Button>
-      </form>
+        </div>
+      )}
     </div>
   );
 }

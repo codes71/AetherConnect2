@@ -151,10 +151,10 @@ export function ChatView({ conversationId }: ChatViewProps) {
       <div className="shrink-0 animate-fade-in">
         <ChatHeader room={room} />
       </div>
-      
-      {/* Scrollable Messages - takes remaining space */}
-      <div className="flex-1 overflow-hidden">
-        <MessageList 
+
+      {/* Scrollable Messages - takes remaining space minus input area */}
+      <div className="flex-1 overflow-hidden min-h-0">
+        <MessageList
           messages={allMessages}
           currentUserId={user.id}
           isLoading={isLoadingHistory}
@@ -163,8 +163,8 @@ export function ChatView({ conversationId }: ChatViewProps) {
         />
       </div>
 
-      {/* Fixed Input */}
-      <div className="shrink-0">
+      {/* Input Area - Can expand downward */}
+      <div className="flex-shrink-0">
         <MessageInput
           conversationId={conversationId}
           lastMessage={lastMessageForSmartReplies}
