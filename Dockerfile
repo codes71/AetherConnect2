@@ -29,8 +29,12 @@ COPY ecosystem.config.js ./
 COPY start.sh ./
 RUN chmod +x start.sh
 
-# Expose only gateway port
-EXPOSE 3000
+# Expose ports
+EXPOSE 3000 3001 3002
+
+# Health check for the API Gateway
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+  CMD curl -f http://localhost:3000/api/health || exit 1
 
 # Start all services with coordinated startup
 CMD ["./start.sh"]

@@ -30,7 +30,14 @@ export function ClientLayout({
   useEffect(() => {
     const handleAuthError = (title: string, description: string) => {
       const { logout } = useAuthStore.getState();
-      logout({ suppressToast: true, redirect: false, toastFn: toast, routerPush: router.push });
+      logout({
+        suppressToast: true,
+        redirect: false,
+        toastFn: toast,
+        routerPush: (path: string) => {
+          router.push(path);
+        }
+      });
       toast({
         title,
         description,

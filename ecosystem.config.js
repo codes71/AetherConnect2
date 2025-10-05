@@ -8,7 +8,8 @@ module.exports = {
       env: {
         ...process.env,
         NODE_ENV: "production",
-        GRPC_PORT: process.env.AUTH_SERVICE_GRPC_PORT || 50001,
+        AUTH_SERVICE_GRPC_PORT: process.env.AUTH_SERVICE_GRPC_PORT || 50001,
+        AUTH_SERVICE_HTTP_PORT: process.env.AUTH_SERVICE_HTTP_PORT || 3002,
       },
     },
     {
