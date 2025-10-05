@@ -1,3 +1,4 @@
+import '@types/express';
 declare global {
   namespace Express {
     interface Request {

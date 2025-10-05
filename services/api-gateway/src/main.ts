@@ -11,9 +11,6 @@ import cookieParser from "cookie-parser";
 import { Socket } from "net";
 import { createProxyMiddleware } from "http-proxy-middleware";
 
-// Import custom types
-import "./types/express";
-
 const logger = createServiceLogger("api-gateway");
 
 async function bootstrap() {
