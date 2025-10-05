@@ -11,7 +11,7 @@ import {
   HttpCode,
   HttpStatus,
 } from "@nestjs/common";
-import { Request, Response } from "express";
+import type { Request, Response } from "express";
 import {
   ApiTags,
   ApiOperation,
@@ -116,7 +116,7 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: "Logout user" })
   @ApiResponse({ status: 200, description: "Logout successful" })
-  async logout(@Req() req: any, @Res({ passthrough: true }) res: Response) {
+  async logout(@Req() req: Request, @Res({ passthrough: true }) res: Response) {
     try {
       const refreshToken = req.cookies["refreshToken"];
       logger.info(`Logout: Refresh token from cookies: ${refreshToken}`);

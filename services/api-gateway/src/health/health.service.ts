@@ -34,7 +34,7 @@ export class HealthService {
       const latency = Date.now() - start;
 
       return { status: 'OK', latency };
-    } catch (error) {
+    } catch {
       return { status: 'ERROR' };
     }
   }

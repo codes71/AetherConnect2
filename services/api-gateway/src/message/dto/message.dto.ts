@@ -1,6 +1,6 @@
 
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsString, IsNotEmpty, IsOptional, IsNumber, IsBoolean } from 'class-validator';
+import { IsString, IsNotEmpty, IsOptional, IsNumber } from 'class-validator';
 import { Type } from 'class-transformer';
 
 export class SendMessageDto {
@@ -95,7 +95,7 @@ export class MessageHistoryResponseDto {
   message: string;
 
   @ApiPropertyOptional({ type: [Object] })
-  messages?: any[]; // Use a more specific DTO if full message data is needed
+  messages?: Record<string, unknown>[]; // Use a more specific DTO if full message data is needed
 
   @ApiPropertyOptional()
   error?: string;
@@ -109,7 +109,7 @@ export class RoomsResponseDto {
   message: string;
 
   @ApiPropertyOptional({ type: [Object] })
-  rooms?: any[]; // Use a more specific DTO if full room data is needed
+  rooms?: Record<string, unknown>[]; // Use a more specific DTO if full room data is needed
 
   @ApiPropertyOptional()
   error?: string;
@@ -123,7 +123,7 @@ export class RoomResponseDto {
   message: string;
 
   @ApiPropertyOptional({ type: Object })
-  room?: any; // Use a more specific DTO if full room data is needed
+  room?: Record<string, unknown>; // Use a more specific DTO if full room data is needed
 
   @ApiPropertyOptional()
   error?: string;
@@ -143,7 +143,7 @@ export class RoomMembershipResponseDto {
   roomType?: string;
 
   @ApiPropertyOptional()
-  room?: any;
+  room?: Record<string, unknown>;
 
   @ApiPropertyOptional()
   error?: string;
