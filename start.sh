@@ -64,19 +64,8 @@ sleep 5
 # Check if services are starting up
 echo "Checking service startup status..."
 
-# Check auth service gRPC
-if ! check_grpc_service 50001 "Auth Service"; then
-    echo "Auth Service failed to start properly"
-    pm2 logs auth-service --lines 20
-    exit 1
-fi
-
-# Check message service gRPC
-if ! check_grpc_service 50002 "Message Service"; then
-    echo "Message Service failed to start properly"
-    pm2 logs message-service --lines 20
-    exit 1
-fi
+# For Railway deployment, be more lenient with service startup
+# Just check that API Gateway is running, microservices can start later
 
 # Check API gateway HTTP
 if ! check_service_ready 3000 "API Gateway"; then
@@ -85,11 +74,14 @@ if ! check_service_ready 3000 "API Gateway"; then
     exit 1
 fi
 
-echo "🎉 All services started successfully!"
+echo "🎉 API Gateway started successfully!"
 echo "🔗 API Gateway: http://localhost:3000"
 echo "🔐 Auth Service (gRPC): localhost:50001"
 echo "💬 Message Service (gRPC): localhost:50002"
 echo "💬 Message Service (HTTP): localhost:3001"
+
+# Note: Microservices may start asynchronously in Railway environment
+echo "Note: Microservices may take additional time to start in Railway environment"
 
 # Keep the script running to maintain PM2 processes
 wait

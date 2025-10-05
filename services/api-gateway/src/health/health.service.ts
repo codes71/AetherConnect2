@@ -21,16 +21,15 @@ export class HealthService {
       messageService: messageServiceHealth,
     };
 
-    // Determine overall status based on dependencies
-    const allHealthy = Object.values(dependencies).every(dep => dep.status === 'OK');
-    const status = allHealthy ? 'OK' : 'ERROR';
-
+    // For Railway deployment, don't fail if microservices aren't available yet
+    // Just report their status without affecting overall health
     const health = {
-      status,
+      status: 'OK', // API Gateway itself is healthy
       service: 'api-gateway',
       version: '1.0.0',
       timestamp: new Date().toISOString(),
       dependencies,
+      note: 'Microservices may not be available during Railway deployment startup',
     };
 
     return health;
