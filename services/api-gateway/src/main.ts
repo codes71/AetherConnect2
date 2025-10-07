@@ -49,7 +49,7 @@ async function bootstrap() {
     app.use(helmet());
 
     // Trust the proxy to get the correct IP for rate limiting
-    app.set('trust proxy', 1);
+    app.set("trust proxy", 1);
 
     app.use(morgan("dev"));
 
@@ -60,31 +60,30 @@ async function bootstrap() {
     app.use(
       rateLimit({
         windowMs: 15 * 60 * 1000, // 15 minutes
-        max: process.env.NODE_ENV == 'production' ? 100 : 1000, // limit each IP to 100 requests per windowMs
+        max: process.env.NODE_ENV == "production" ? 100 : 1000, // limit each IP to 100 requests per windowMs
         message: "Too many requests from this IP, please try again later.",
       })
     );
 
     // CORS
-    if(process.env.NODE_ENV !== 'production') {
+    if (process.env.NODE_ENV !== "production") {
       logger.warn("CORS is wide open for development");
       app.enableCors({
         origin: true,
         credentials: true,
       });
-    }
-    else {
+    } else {
       // For Railway/production, allow multiple origins
       const allowedOrigins = [];
 
-      if(process.env.FRONTEND_URL) {
+      if (process.env.FRONTEND_URL) {
         // Remove trailing slash if it exists, for robust matching
-        const sanitizedUrl = process.env.FRONTEND_URL.replace( /\/$/, '' );
+        const sanitizedUrl = process.env.FRONTEND_URL.replace(/\/$/, "");
         allowedOrigins.push(sanitizedUrl);
       }
 
       // Allow Railway domains (common Railway URL patterns)
-      if(process.env.RAILWAY_STATIC_URL) {
+      if (process.env.RAILWAY_STATIC_URL) {
         allowedOrigins.push(process.env.RAILWAY_STATIC_URL);
       }
 
@@ -93,21 +92,22 @@ async function bootstrap() {
       allowedOrigins.push(/^https:\/\/.*\.railway\.app$/);
 
       // If no specific origins configured, allow all for Railway deployment
-      if(allowedOrigins.length === 0) {
-        logger.warn("No CORS origins configured, allowing all origins for Railway deployment");
+      if (allowedOrigins.length === 0) {
+        logger.warn(
+          "No CORS origins configured, allowing all origins for Railway deployment"
+        );
         app.enableCors({
           origin: true,
           credentials: true,
         });
       } else {
-        logger.info(`Setting CORS for origins: ${allowedOrigins.join(', ')}`);
+        logger.info(`Setting CORS for origins: ${allowedOrigins.join(", ")}`);
         app.enableCors({
           origin: allowedOrigins,
           credentials: true,
         });
       }
     }
-   
 
     // Global validation pipe
     app.useGlobalPipes(

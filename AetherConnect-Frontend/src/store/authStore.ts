@@ -127,6 +127,8 @@ const createAuthSlice: StateCreator<AuthState, [], [], AuthState> = (set) => ({
       if (success && data?.success) {
         set({ user: data.user, isAuthenticated: true });
         logger.log("✅ Login successful");
+        logger.log("AuthStore isAuthenticated:", true);
+        logger.log("AuthStore user:", data.user);
         return true;
       }
       return false;
