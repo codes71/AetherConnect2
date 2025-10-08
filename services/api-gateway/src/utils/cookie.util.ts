@@ -17,7 +17,8 @@ export const setAuthCookie = (
 
   // Only set domain if it's defined (production environment)
   if (process.env.NODE_ENV === "production") {
-    cookieOptions.domain = ".vercel.app";
+    cookieOptions.domain = ".onrender.com";
+    
   }
 
   res.cookie(name, value, cookieOptions);
