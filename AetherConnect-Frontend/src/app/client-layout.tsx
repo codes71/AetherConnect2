@@ -8,15 +8,8 @@ import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
 import { usePathname } from "next/navigation";
 
-export function ClientLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
-  const { loadUser, isAuthenticated } = useAuthStore((state) => ({
-    loadUser: state.loadUser,
-    isAuthenticated: state.isAuthenticated,
-  }));
+export function ClientLayout({ children }: { children: React.ReactNode }) {
+  const loadUser = useAuthStore((state) => state.loadUser);
   const pathname = usePathname();
   const router = useRouter();
   const { toast } = useToast();
@@ -31,11 +24,12 @@ export function ClientLayout({
   }, [pathname, loadUser]);
 
   useEffect(() => {
+    const { isAuthenticated } = useAuthStore.getState();
     const publicPaths = ["/login", "/signup"];
     if (isAuthenticated && publicPaths.includes(pathname)) {
       router.push("/chat");
     }
-  }, [isAuthenticated, pathname, router]);
+  }, [pathname, router]); // isAuthenticated is accessed via getState, so it's not a direct dependency
 
   useEffect(() => {
     const handleAuthError = (title: string, description: string) => {
@@ -46,7 +40,7 @@ export function ClientLayout({
         toastFn: toast,
         routerPush: (path: string) => {
           router.push(path);
-        }
+        },
       });
       toast({
         title,
@@ -68,16 +62,29 @@ export function ClientLayout({
     const handleTokenReplay = (event: CustomEvent) => {
       handleAuthError(
         "Security Alert",
-        event.detail?.message || "A security violation was detected. Please log in again."
+        event.detail?.message ||
+          "A security violation was detected. Please log in again."
       );
     };
 
-    window.addEventListener("auth:session-expired", handleSessionExpired as EventListener);
-    window.addEventListener("auth:token-replay-detected", handleTokenReplay as EventListener);
+    window.addEventListener(
+      "auth:session-expired",
+      handleSessionExpired as EventListener
+    );
+    window.addEventListener(
+      "auth:token-replay-detected",
+      handleTokenReplay as EventListener
+    );
 
     return () => {
-      window.removeEventListener("auth:session-expired", handleSessionExpired as EventListener);
-      window.removeEventListener("auth:token-replay-detected", handleTokenReplay as EventListener);
+      window.removeEventListener(
+        "auth:session-expired",
+        handleSessionExpired as EventListener
+      );
+      window.removeEventListener(
+        "auth:token-replay-detected",
+        handleTokenReplay as EventListener
+      );
     };
   }, [toast, router]);
 

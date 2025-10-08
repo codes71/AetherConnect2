@@ -44,10 +44,7 @@ class ApiClient {
   private maxQueueSize = 20;
 
   constructor() {
-    const baseURL =
-      process.env.NODE_ENV === "production"
-        ? process.env.NEXT_PUBLIC_API_URL // Use full URL for production
-        : "/api"; // Use Next.js rewrite for local development
+    const baseURL = process.env.NEXT_PUBLIC_API_URL
     logger.log(`API Base URL: ${baseURL}`);
 
     this.axiosInstance = axios.create({
@@ -87,11 +84,17 @@ class ApiClient {
     // Response interceptor with enhanced error handling
     this.axiosInstance.interceptors.response.use(
       (response) => {
-        logger.log(`✅ Response ${response.status} from ${response.config.url}:`, response.data);
+        logger.log(
+          `✅ Response ${response.status} from ${response.config.url}:`,
+          response.data
+        );
         return response;
       },
       async (error: AxiosError) => {
-        logger.error(`❌ Error response ${error.response?.status} from ${error.config?.url}:`, error.response?.data || error.message);
+        logger.error(
+          `❌ Error response ${error.response?.status} from ${error.config?.url}:`,
+          error.response?.data || error.message
+        );
         const originalRequest = error.config;
 
         if (!originalRequest) {

@@ -39,7 +39,7 @@ interface AuthState {
 const createAuthSlice: StateCreator<AuthState, [], [], AuthState> = (set) => ({
   user: null,
   isLoading: false,
-  isAuthenticated: false,
+    isAuthenticated: false,
 
   setLoading: (loading: boolean) => set({ isLoading: loading }),
 
@@ -96,6 +96,9 @@ const createAuthSlice: StateCreator<AuthState, [], [], AuthState> = (set) => ({
       logger.warn("Logout API call failed, but proceeding with local cleanup", error);
     } finally {
       set({ user: null, isAuthenticated: false, isLoading: false });
+      if (typeof window !== "undefined") {
+        localStorage.removeItem("wsToken"); // Clear wsToken from local storage
+      }
       if (redirect && routerPush) {
         routerPush("/login");
       }
