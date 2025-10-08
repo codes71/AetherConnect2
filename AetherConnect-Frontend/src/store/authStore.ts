@@ -20,7 +20,11 @@ interface AuthState {
   user: User | null;
   isLoading: boolean;
   isAuthenticated: boolean;
-  login: (email: string, password: string, toastFn?: ToastFn) => Promise<boolean>;
+  login: (
+    email: string,
+    password: string,
+    toastFn?: ToastFn
+  ) => Promise<boolean>;
   register: (
     username: string,
     firstName: string,
@@ -29,7 +33,12 @@ interface AuthState {
     password: string,
     toastFn?: ToastFn
   ) => Promise<boolean>;
-  logout: (options?: { suppressToast?: boolean; redirect?: boolean; toastFn?: ToastFn; routerPush?: (path: string) => void }) => Promise<void>;
+  logout: (options?: {
+    suppressToast?: boolean;
+    redirect?: boolean;
+    toastFn?: ToastFn;
+    routerPush?: (path: string) => void;
+  }) => Promise<void>;
   refreshUser: () => Promise<void>;
   loadUser: () => Promise<void>;
   setLoading: (loading: boolean) => void;
@@ -39,14 +48,15 @@ interface AuthState {
 const createAuthSlice: StateCreator<AuthState, [], [], AuthState> = (set) => ({
   user: null,
   isLoading: false,
-    isAuthenticated: false,
+  isAuthenticated: false,
 
   setLoading: (loading: boolean) => set({ isLoading: loading }),
 
-  setUser: (user: User | null) => set({ 
-    user, 
-    isAuthenticated: !!user 
-  }),
+  setUser: (user: User | null) =>
+    set({
+      user,
+      isAuthenticated: !!user,
+    }),
 
   loadUser: async () => {
     logger.log("🔍 Loading user session...");
@@ -64,10 +74,10 @@ const createAuthSlice: StateCreator<AuthState, [], [], AuthState> = (set) => ({
     } else {
       set({ user: null, isAuthenticated: false });
       // Dispatch auth error event to trigger logout and redirect
-      if (error?.code === 'UNAUTHORIZED') {
+      if (error?.code === "UNAUTHORIZED") {
         if (typeof window !== "undefined") {
-          const event = new CustomEvent('auth:session-expired', {
-            detail: { message: 'Session expired. Please log in again.', error }
+          const event = new CustomEvent("auth:session-expired", {
+            detail: { message: "Session expired. Please log in again.", error },
           });
           window.dispatchEvent(event);
         }
@@ -76,8 +86,18 @@ const createAuthSlice: StateCreator<AuthState, [], [], AuthState> = (set) => ({
     set({ isLoading: false });
   },
 
-  logout: async (options?: { suppressToast?: boolean; redirect?: boolean; toastFn?: ToastFn; routerPush?: (path: string) => void }) => {
-    const { suppressToast = false, redirect = true, toastFn, routerPush } = options || {};
+  logout: async (options?: {
+    suppressToast?: boolean;
+    redirect?: boolean;
+    toastFn?: ToastFn;
+    routerPush?: (path: string) => void;
+  }) => {
+    const {
+      suppressToast = false,
+      redirect = true,
+      toastFn,
+      routerPush,
+    } = options || {};
 
     try {
       const { success } = await enhancedApiCall({
@@ -93,7 +113,10 @@ const createAuthSlice: StateCreator<AuthState, [], [], AuthState> = (set) => ({
         });
       }
     } catch (error) {
-      logger.warn("Logout API call failed, but proceeding with local cleanup", error);
+      logger.warn(
+        "Logout API call failed, but proceeding with local cleanup",
+        error
+      );
     } finally {
       set({ user: null, isAuthenticated: false, isLoading: false });
       if (typeof window !== "undefined") {
@@ -118,7 +141,11 @@ const createAuthSlice: StateCreator<AuthState, [], [], AuthState> = (set) => ({
     }
   },
 
-  login: async (email: string, password: string, toastFn?: ToastFn): Promise<boolean> => {
+  login: async (
+    email: string,
+    password: string,
+    toastFn?: ToastFn
+  ): Promise<boolean> => {
     set({ isLoading: true });
     try {
       const { success, data } = await enhancedApiCall({
@@ -154,7 +181,13 @@ const createAuthSlice: StateCreator<AuthState, [], [], AuthState> = (set) => ({
     set({ isLoading: true });
     try {
       const { success, data } = await enhancedApiCall({
-        apiCall: api.auth.register({ username, firstName, lastName, email, password }),
+        apiCall: api.auth.register({
+          username,
+          firstName,
+          lastName,
+          email,
+          password,
+        }),
         toast: toastFn,
         errorContext: "auth-register",
       });
@@ -174,14 +207,11 @@ const createAuthSlice: StateCreator<AuthState, [], [], AuthState> = (set) => ({
 });
 
 const useAuthStore = create(
-  persist(
-    createAuthSlice,
-    {
-      name: "auth-storage",
-      storage: createJSONStorage(() => localStorage),
-      partialize: (state) => ({ user: state.user }),
-    }
-  )
+  persist(createAuthSlice, {
+    name: "auth-storage",
+    storage: createJSONStorage(() => localStorage),
+    partialize: (state) => ({ user: state.user }),
+  })
 );
 
 export default useAuthStore;

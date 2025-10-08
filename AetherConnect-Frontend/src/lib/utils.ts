@@ -20,8 +20,8 @@ if (!isDevelopment) {
 const noOp = () => {};
 
 export const logger = {
-  log: isDevelopment ? console.log.bind(console) : noOp,
-  warn: isDevelopment ? console.warn.bind(console) : noOp,
-  error: isDevelopment ? console.error.bind(console) : noOp,
-  info: isDevelopment ? console.info.bind(console) : noOp,
+  log: isDevelopment ? console.log : noOp,
+  warn: isDevelopment ? console.warn : noOp,
+  error: isDevelopment ? console.error : noOp,
+  info: isDevelopment ? console.info : noOp,
 };

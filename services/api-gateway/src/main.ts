@@ -77,9 +77,12 @@ async function bootstrap() {
       const allowedOrigins = [];
 
       if (process.env.FRONTEND_URL) {
-        // Remove trailing slash if it exists, for robust matching
-        const sanitizedUrl = process.env.FRONTEND_URL.replace(/\/$/, "");
-        allowedOrigins.push(sanitizedUrl);
+        const frontendUrls = process.env.FRONTEND_URL.split(',').map(url => url.trim()).filter(url => url.length > 0);
+        frontendUrls.forEach(url => {
+          // Remove trailing slash if it exists, for robust matching
+          const sanitizedUrl = url.replace(/\/$/, "");
+          allowedOrigins.push(sanitizedUrl);
+        });
       }
 
       // Allow Railway domains (common Railway URL patterns)
