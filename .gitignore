@@ -91,5 +91,6 @@ env.example
 # Scripts (if not needed for deployment)
 !ecosystem.config.js
 !services/api-gateway/src/types/
+!services/api-gateway/src/types/express.d.ts
 docker-compose.yml
 /.clinerules
