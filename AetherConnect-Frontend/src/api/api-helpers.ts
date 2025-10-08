@@ -55,19 +55,9 @@ export async function enhancedApiCall<T>({
     let title = "Error";
     let description = error.message;
 
-    // Context-specific error messages
-    if (errorContext.includes("login")) {
-      title = "Login Failed";
-      description = "Invalid email or password";
-    } else if (errorContext.includes("register")) {
-      title = "Registration Failed";
-    } else if (errorContext.includes("profile")) {
-      title = "Failed to Load Profile";
-    }
-
     toast({
-      title,
-      description,
+      title: "Error",
+      description: error.message,
       variant: "destructive",
     });
   }

@@ -13,6 +13,7 @@ import api from "@/api/api";
 import { Room } from "@/lib/types";
 import useAuthStore from "@/store/authStore";
 import { enhancedApiCall } from "@/api/api-helpers";
+import { useToast } from "@/hooks/use-toast"; // Import useToast
 
 interface RoomContextType {
   rooms: Room[];
@@ -25,6 +26,7 @@ const RoomContext = createContext<RoomContextType | undefined>(undefined);
 
 export function RoomProvider({ children }: { children: ReactNode }) {
   const { user } = useAuthStore();
+  const { toast } = useToast(); // Initialize useToast
   const [rooms, setRooms] = useState<Room[]>([]);
   const roomsRef = useRef(rooms);
   roomsRef.current = rooms;
@@ -42,7 +44,8 @@ export function RoomProvider({ children }: { children: ReactNode }) {
       const { success, data } = await enhancedApiCall<{ rooms: Room[] }>({
         apiCall: api.message.getRooms(),
         errorContext: 'rooms-fetch',
-        suppressErrorToast: true,
+        toast: toast, // Pass the toast function
+        // suppressErrorToast is removed to allow toasts for all errors
       });
 
       if (success && data && Array.isArray(data.rooms)) {
@@ -54,10 +57,11 @@ export function RoomProvider({ children }: { children: ReactNode }) {
     } catch (error) {
       console.error("Failed to fetch rooms:", error);
       setRooms([]);
+      // Manual toast call removed, enhancedApiCall will handle it
     } finally {
       setIsLoading(false);
     }
-  }, [user]);
+  }, [user, toast]);
 
   const refreshRooms = useCallback(async () => {
     await fetchRooms();

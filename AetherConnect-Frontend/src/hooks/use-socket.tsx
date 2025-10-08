@@ -107,16 +107,7 @@ export const useSocket = () => {
             connectSocketFnRef.current?.();
           };
 
-          toast({
-            title: "Connection Failed",
-            description: "Unable to connect. Click to retry.",
-            variant: "destructive",
-            action: (
-              <ToastAction altText="Retry Connection" onClick={retryAction}>
-                Retry
-              </ToastAction>
-            ),
-          });
+          // Manual toast call removed, enhancedApiCall will handle it
         }
         return;
       }
@@ -282,11 +273,19 @@ export const useSocket = () => {
       const { success, data, error } = await enhancedApiCall({
         apiCall: api.auth.getWsToken(),
         errorContext: "socket-connection",
-        suppressErrorToast: true,
+        toast: toast, // Pass the toast function
+        // suppressErrorToast is removed to allow toasts for all errors
       });
 
       if (!success || !data?.token) {
-        throw error || new Error("Failed to get WebSocket token");
+        // If enhancedApiCall already showed a toast, we don't need to throw a generic error.
+        // We can just return and let the error handling in enhancedApiCall take care of it.
+        // However, if there's no error object, we still need a fallback.
+        if (error) {
+          throw error;
+        } else {
+          throw new Error("Failed to get WebSocket token");
+        }
       }
 
       // Cleanup existing socket

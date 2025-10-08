@@ -10,14 +10,6 @@ import useAuthStore from '@/store/authStore';
 
 export default function ChatPage() {
   const { selectedRoomId } = useSelectedRoom();
-  const { isAuthenticated } = useAuthStore();
-  const router = useRouter();
-
-  useEffect(() => {
-    if (!isAuthenticated) {
-      router.push('/login');
-    }
-  }, [isAuthenticated, router]);
 
   if (!selectedRoomId) {
     return (

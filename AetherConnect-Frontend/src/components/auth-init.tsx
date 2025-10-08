@@ -15,9 +15,9 @@ export function AuthInit() {
     if (publicPaths.includes(pathname)) {
       useAuthStore.setState({ isLoading: false });
     } else {
-      loadUser();
+      loadUser(toast); // Pass the toast function
     }
-  }, [pathname, loadUser]);
+  }, [pathname, loadUser, toast]);
 
   useEffect(() => {
     const handleAuthError = (title: string, description: string) => {

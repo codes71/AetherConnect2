@@ -8,6 +8,7 @@ import { Room } from "@/lib/types";
 import api from "@/api/api";
 import { logger } from "@/lib/utils";
 import { enhancedApiCall } from "@/api/api-helpers";
+import { AppError, createAppError } from "@/lib/error/types";
 
 interface ToastOptions {
   title: string;
@@ -21,7 +22,7 @@ interface AuthSlice {
   user: User | null;
   isLoading: boolean;
   isAuthenticated: boolean;
-  login: (email: string, password: string, toastFn?: ToastFn) => Promise<boolean>;
+  login: (email: string, password: string, toastFn?: ToastFn) => Promise<{ success: boolean; error?: AppError }>;
   register: (
     username: string,
     firstName: string,
@@ -29,10 +30,10 @@ interface AuthSlice {
     email: string,
     password: string,
     toastFn?: ToastFn
-  ) => Promise<boolean>;
+  ) => Promise<{ success: boolean; error?: AppError }>;
   logout: (options?: { suppressToast?: boolean; redirect?: boolean; toastFn?: ToastFn; routerPush?: (path: string) => void }) => Promise<void>;
-  refreshUser: () => Promise<void>;
-  loadUser: () => Promise<void>;
+  refreshUser: (toastFn?: ToastFn) => Promise<void>;
+  loadUser: (toastFn?: ToastFn) => Promise<void>;
   setLoading: (loading: boolean) => void;
   setUser: (user: User | null) => void;
 }
@@ -40,8 +41,8 @@ interface AuthSlice {
 interface RoomSlice {
   rooms: Room[];
   isLoading: boolean;
-  fetchRooms: () => Promise<void>;
-  refreshRooms: () => Promise<void>;
+  fetchRooms: (toastFn?: ToastFn) => Promise<void>;
+  refreshRooms: (toastFn?: ToastFn) => Promise<void>;
   findRoomById: (id: string) => Room | undefined;
 }
 
@@ -64,14 +65,15 @@ const createAuthSlice: StateCreator<AppState, [], [], AuthSlice> = (set) => ({
     isAuthenticated: !!user 
   }),
 
-  loadUser: async () => {
+  loadUser: async (toastFn?: ToastFn) => {
     logger.log("🔍 Loading user session...");
     set({ isLoading: true });
 
     const { success, data } = await enhancedApiCall({
       apiCall: api.auth.getProfile(),
       errorContext: "auth-profile-initial",
-      suppressErrorToast: true,
+      toast: toastFn, // Pass toastFn
+      // suppressErrorToast is removed
     });
 
     if (success && data?.success) {
@@ -90,7 +92,8 @@ const createAuthSlice: StateCreator<AppState, [], [], AuthSlice> = (set) => ({
       const { success } = await enhancedApiCall({
         apiCall: api.auth.logout(),
         errorContext: "auth-logout",
-        suppressErrorToast: true,
+        toast: toastFn, // Pass toastFn
+        // suppressErrorToast is removed
       });
 
       if (success && !suppressToast && toastFn) {
@@ -109,12 +112,13 @@ const createAuthSlice: StateCreator<AppState, [], [], AuthSlice> = (set) => ({
     }
   },
 
-  refreshUser: async () => {
+  refreshUser: async (toastFn?: ToastFn) => {
     logger.log("🔄 Refreshing user data...");
     const { success, data } = await enhancedApiCall({
       apiCall: api.auth.getProfile(),
       errorContext: "auth-refresh-profile",
-      suppressErrorToast: true,
+      toast: toastFn, // Pass toastFn
+      // suppressErrorToast is removed
     });
 
     if (success && data?.success) {
@@ -122,10 +126,10 @@ const createAuthSlice: StateCreator<AppState, [], [], AuthSlice> = (set) => ({
     }
   },
 
-  login: async (email: string, password: string, toastFn?: ToastFn): Promise<boolean> => {
+  login: async (email: string, password: string, toastFn?: ToastFn): Promise<{ success: boolean; error?: AppError }> => {
     set({ isLoading: true });
     try {
-      const { success, data } = await enhancedApiCall({
+      const { success, data, error } = await enhancedApiCall({
         apiCall: api.auth.login({ email, password }),
         toast: toastFn,
         errorContext: "auth-login",
@@ -134,12 +138,12 @@ const createAuthSlice: StateCreator<AppState, [], [], AuthSlice> = (set) => ({
       if (success && data?.success) {
         set({ user: data.user, isAuthenticated: true });
         logger.log("✅ Login successful");
-        return true;
+        return { success: true };
       }
-      return false;
+      return { success: false, error };
     } catch (error) {
       logger.error("Login failed:", error);
-      return false;
+      return { success: false, error: createAppError("UNKNOWN", "LOGIN_FAILED", "An unexpected error occurred during login.") };
     } finally {
       set({ isLoading: false });
     }
@@ -152,10 +156,10 @@ const createAuthSlice: StateCreator<AppState, [], [], AuthSlice> = (set) => ({
     email: string,
     password: string,
     toastFn?: ToastFn
-  ): Promise<boolean> => {
+  ): Promise<{ success: boolean; error?: AppError }> => {
     set({ isLoading: true });
     try {
-      const { success, data } = await enhancedApiCall({
+      const { success, data, error } = await enhancedApiCall({
         apiCall: api.auth.register({ username, firstName, lastName, email, password }),
         toast: toastFn,
         errorContext: "auth-register",
@@ -163,12 +167,12 @@ const createAuthSlice: StateCreator<AppState, [], [], AuthSlice> = (set) => ({
 
       if (success && data?.success) {
         set({ user: data.user, isAuthenticated: true });
-        return true;
+        return { success: true };
       }
-      return false;
+      return { success: false, error };
     } catch (error) {
       logger.error("Registration failed:", error);
-      return false;
+      return { success: false, error: createAppError("UNKNOWN", "REGISTRATION_FAILED", "An unexpected error occurred during registration.") };
     } finally {
       set({ isLoading: false });
     }
@@ -179,7 +183,7 @@ const createRoomSlice: StateCreator<AppState, [], [], RoomSlice> = (set, get) =>
   rooms: [],
   isLoading: false,
 
-  fetchRooms: async () => {
+  fetchRooms: async (toastFn?: ToastFn) => {
     const { user } = get();
     if (!user) {
       set({ rooms: [], isLoading: false });
@@ -191,7 +195,8 @@ const createRoomSlice: StateCreator<AppState, [], [], RoomSlice> = (set, get) =>
       const { success, data } = await enhancedApiCall<{ rooms: Room[] }>({
         apiCall: api.message.getRooms(),
         errorContext: 'rooms-fetch',
-        suppressErrorToast: true,
+        toast: toastFn, // Pass toastFn
+        // suppressErrorToast is removed
       });
 
       if (success && data && Array.isArray(data.rooms)) {
@@ -208,8 +213,8 @@ const createRoomSlice: StateCreator<AppState, [], [], RoomSlice> = (set, get) =>
     }
   },
 
-  refreshRooms: async () => {
-    await get().fetchRooms();
+  refreshRooms: async (toastFn?: ToastFn) => {
+    await get().fetchRooms(toastFn);
   },
 
   findRoomById: (id: string) => {

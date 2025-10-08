@@ -35,14 +35,14 @@ export function AuthLoginForm() {
 
   const onSubmit = async (data: LoginData) => {
     setError(null);
-    const success = await login(data.email, data.password, toast);
+    const { success, error: authError } = await login(data.email, data.password, toast);
     console.log('Login success:', success);
     console.log('Auth state after login:', useAuthStore.getState());
     if (success) {
       console.log("Redirecting to /chat");
       router.push("/chat");
     } else {
-      setError("Invalid email or password. Please try again.");
+      setError(authError?.message || "An unexpected error occurred. Please try again.");
     }
   };
 

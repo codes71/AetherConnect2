@@ -19,9 +19,9 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
     if (publicPaths.includes(pathname)) {
       useAuthStore.setState({ isLoading: false });
     } else {
-      loadUser();
+      loadUser(toast); // Pass the toast function
     }
-  }, [pathname, loadUser]);
+  }, [pathname, loadUser, toast]);
 
   useEffect(() => {
     const { isAuthenticated } = useAuthStore.getState();

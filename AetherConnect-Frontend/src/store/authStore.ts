@@ -7,6 +7,7 @@ import { User } from "@/lib/types";
 import api from "@/api/api";
 import { logger } from "@/lib/utils";
 import { enhancedApiCall } from "@/api/api-helpers";
+import { AppError, createAppError } from "@/lib/error/types";
 
 interface ToastOptions {
   title: string;
@@ -24,7 +25,7 @@ interface AuthState {
     email: string,
     password: string,
     toastFn?: ToastFn
-  ) => Promise<boolean>;
+  ) => Promise<{ success: boolean; error?: AppError }>;
   register: (
     username: string,
     firstName: string,
@@ -32,15 +33,15 @@ interface AuthState {
     email: string,
     password: string,
     toastFn?: ToastFn
-  ) => Promise<boolean>;
+  ) => Promise<{ success: boolean; error?: AppError }>;
   logout: (options?: {
     suppressToast?: boolean;
     redirect?: boolean;
     toastFn?: ToastFn;
     routerPush?: (path: string) => void;
   }) => Promise<void>;
-  refreshUser: () => Promise<void>;
-  loadUser: () => Promise<void>;
+  refreshUser: (toastFn?: ToastFn) => Promise<void>;
+  loadUser: (toastFn?: ToastFn) => Promise<void>;
   setLoading: (loading: boolean) => void;
   setUser: (user: User | null) => void;
 }
@@ -58,14 +59,15 @@ const createAuthSlice: StateCreator<AuthState, [], [], AuthState> = (set) => ({
       isAuthenticated: !!user,
     }),
 
-  loadUser: async () => {
+  loadUser: async (toastFn?: ToastFn) => {
     logger.log("🔍 Loading user session...");
     set({ isLoading: true });
 
     const { success, data, error } = await enhancedApiCall({
       apiCall: api.auth.getProfile(),
       errorContext: "auth-profile-initial",
-      suppressErrorToast: true,
+      toast: toastFn, // Pass toastFn
+      // suppressErrorToast is removed
     });
 
     if (success && data?.success) {
@@ -103,7 +105,8 @@ const createAuthSlice: StateCreator<AuthState, [], [], AuthState> = (set) => ({
       const { success } = await enhancedApiCall({
         apiCall: api.auth.logout(),
         errorContext: "auth-logout",
-        suppressErrorToast: true,
+        toast: toastFn, // Pass toastFn
+        // suppressErrorToast is removed
       });
 
       if (success && !suppressToast && toastFn) {
@@ -128,12 +131,13 @@ const createAuthSlice: StateCreator<AuthState, [], [], AuthState> = (set) => ({
     }
   },
 
-  refreshUser: async () => {
+  refreshUser: async (toastFn?: ToastFn) => {
     logger.log("🔄 Refreshing user data...");
     const { success, data } = await enhancedApiCall({
       apiCall: api.auth.getProfile(),
       errorContext: "auth-refresh-profile",
-      suppressErrorToast: true,
+      toast: toastFn, // Pass toastFn
+      // suppressErrorToast is removed
     });
 
     if (success && data?.success) {
@@ -145,10 +149,10 @@ const createAuthSlice: StateCreator<AuthState, [], [], AuthState> = (set) => ({
     email: string,
     password: string,
     toastFn?: ToastFn
-  ): Promise<boolean> => {
+  ): Promise<{ success: boolean; error?: AppError }> => {
     set({ isLoading: true });
     try {
-      const { success, data } = await enhancedApiCall({
+      const { success, data, error } = await enhancedApiCall({
         apiCall: api.auth.login({ email, password }),
         toast: toastFn,
         errorContext: "auth-login",
@@ -159,12 +163,12 @@ const createAuthSlice: StateCreator<AuthState, [], [], AuthState> = (set) => ({
         logger.log("✅ Login successful");
         logger.log("AuthStore isAuthenticated:", true);
         logger.log("AuthStore user:", data.user);
-        return true;
+        return { success: true };
       }
-      return false;
+      return { success: false, error };
     } catch (error) {
       logger.error("Login failed:", error);
-      return false;
+      return { success: false, error: createAppError("UNKNOWN", "LOGIN_FAILED", "An unexpected error occurred during login.") };
     } finally {
       set({ isLoading: false });
     }
@@ -177,10 +181,10 @@ const createAuthSlice: StateCreator<AuthState, [], [], AuthState> = (set) => ({
     email: string,
     password: string,
     toastFn?: ToastFn
-  ): Promise<boolean> => {
+  ): Promise<{ success: boolean; error?: AppError }> => {
     set({ isLoading: true });
     try {
-      const { success, data } = await enhancedApiCall({
+      const { success, data, error } = await enhancedApiCall({
         apiCall: api.auth.register({
           username,
           firstName,
@@ -194,12 +198,12 @@ const createAuthSlice: StateCreator<AuthState, [], [], AuthState> = (set) => ({
 
       if (success && data?.success) {
         set({ user: data.user, isAuthenticated: true });
-        return true;
+        return { success: true };
       }
-      return false;
+      return { success: false, error };
     } catch (error) {
       logger.error("Registration failed:", error);
-      return false;
+      return { success: false, error: createAppError("UNKNOWN", "REGISTRATION_FAILED", "An unexpected error occurred during registration.") };
     } finally {
       set({ isLoading: false });
     }

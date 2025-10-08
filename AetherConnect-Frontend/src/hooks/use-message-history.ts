@@ -25,7 +25,8 @@ export const useMessageHistory = (roomId: string) => {
         const { success, data } = await enhancedApiCall<{ messages: Message[] }>({
           apiCall: api.message.getMessages(currentRoomId, currentPage, MESSAGE_LIMIT),
           errorContext: `messages-history-${currentRoomId}`,
-          suppressErrorToast: currentPage > 1, // Only show toast for initial load failures
+          toast: toast, // Pass the toast function
+          // suppressErrorToast is removed to allow toasts for all errors
         });
 
         if (success && data && Array.isArray(data.messages)) {
@@ -47,15 +48,7 @@ export const useMessageHistory = (roomId: string) => {
           setHistoryMessages([]);
         }
         setHasMore(false);
-        
-        // Only show error for initial load
-        if (currentPage === 1) {
-          toast({
-            title: "Failed to load messages",
-            description: "Could not load message history",
-            variant: "destructive",
-          });
-        }
+        // Manual toast call removed, enhancedApiCall will handle it
       } finally {
         setIsLoadingHistory(false);
       }
