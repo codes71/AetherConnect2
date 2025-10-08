@@ -6,24 +6,36 @@ export const setAuthCookie = (
   value: string,
   maxAge: number
 ) => {
-  res.cookie(name, value, {
+  const cookieOptions: any = {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
     sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
     partitioned: process.env.NODE_ENV === "production",
     maxAge: maxAge,
     path: "/",
-    domain: process.env.NODE_ENV === "production" ? "https://aetherconnect2.onrender.com" : undefined,
-  });
+  };
+
+  // Only set domain if it's defined (production environment)
+  if (process.env.NODE_ENV === "production") {
+    cookieOptions.domain = ".vercel.app";
+  }
+
+  res.cookie(name, value, cookieOptions);
 };
 
 export const clearAuthCookie = (res: Response, name: string) => {
-  res.clearCookie(name, {
+  const cookieOptions: any = {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
     sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
     partitioned: process.env.NODE_ENV === "production",
     path: "/",
-    domain: process.env.NODE_ENV === "production" ? "https://aetherconnect2.onrender.com" : undefined,
-  });
+  };
+
+  // Only set domain if it's defined (production environment)
+  if (process.env.NODE_ENV === "production") {
+    cookieOptions.domain = ".onrender.com";
+  }
+
+  res.clearCookie(name, cookieOptions);
 };
