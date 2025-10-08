@@ -94,3 +94,4 @@ env.example
 !services/api-gateway/src/types/express.d.ts
 docker-compose.yml
 /.clinerules
+/docs

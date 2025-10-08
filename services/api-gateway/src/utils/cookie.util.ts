@@ -13,6 +13,7 @@ export const setAuthCookie = (
     partitioned: process.env.NODE_ENV === "production",
     maxAge: maxAge,
     path: "/",
+    domain: process.env.NODE_ENV === "production" ? ".vercel.app" : undefined,
   });
 };
 
@@ -23,5 +24,6 @@ export const clearAuthCookie = (res: Response, name: string) => {
     sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
     partitioned: process.env.NODE_ENV === "production",
     path: "/",
+    domain: process.env.NODE_ENV === "production" ? ".vercel.app" : undefined,
   });
 };
