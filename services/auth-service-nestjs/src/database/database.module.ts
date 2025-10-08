@@ -21,7 +21,7 @@ dotenv.config({ path: "../../.env" });
         },
       },
       entities: [User],
-      // synchronize: true, // Set to false in production and use migrations
+      synchronize: true, // Temporarily enabled to fix schema mismatch
       logging: false,
     }),
   ],

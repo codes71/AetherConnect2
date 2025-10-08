@@ -13,7 +13,10 @@ export function ClientLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const loadUser = useAuthStore((state) => state.loadUser);
+  const { loadUser, isAuthenticated } = useAuthStore((state) => ({
+    loadUser: state.loadUser,
+    isAuthenticated: state.isAuthenticated,
+  }));
   const pathname = usePathname();
   const router = useRouter();
   const { toast } = useToast();
@@ -26,6 +29,13 @@ export function ClientLayout({
       loadUser();
     }
   }, [pathname, loadUser]);
+
+  useEffect(() => {
+    const publicPaths = ["/login", "/signup"];
+    if (isAuthenticated && publicPaths.includes(pathname)) {
+      router.push("/chat");
+    }
+  }, [isAuthenticated, pathname, router]);
 
   useEffect(() => {
     const handleAuthError = (title: string, description: string) => {

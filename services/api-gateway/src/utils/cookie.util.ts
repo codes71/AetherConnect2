@@ -1,4 +1,3 @@
-
 import type { Response } from "express";
 
 export const setAuthCookie = (
@@ -17,10 +16,7 @@ export const setAuthCookie = (
   });
 };
 
-export const clearAuthCookie = (
-  res: Response,
-  name: string
-) => {
+export const clearAuthCookie = (res: Response, name: string) => {
   res.clearCookie(name, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",

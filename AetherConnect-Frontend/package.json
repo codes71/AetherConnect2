@@ -7,8 +7,8 @@
     "genkit:dev": "genkit start --port 3400 -- tsx src/ai/dev.ts",
     "genkit:watch": "genkit start -- tsx --watch src/ai/dev.ts",
     "build": "next build",
-    "start": "next start -p 3004",
-    "start:prod": "NODE_ENV=production next start -p 3004",
+    "start": "HTTPS=true next start -p 3004",
+    "start:prod": "NODE_ENV=production HTTPS=true next start -p 3004",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
     "build:analyze": "ANALYZE=true next build"
