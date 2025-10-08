@@ -92,4 +92,4 @@ env.example
 !ecosystem.config.js
 !services/api-gateway/src/types/
 docker-compose.yml
-.clinerules
+/.clinerules
