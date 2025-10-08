@@ -1,13 +1,11 @@
 "use client";
 
 import { useEffect, useRef, useState, useCallback } from "react";
-import * as React from "react";
 import { io, Socket } from "socket.io-client";
 import { Message } from "@/lib/types";
 import  useAuthStore from '@/store/authStore';
 
 import { useToast } from "@/hooks/use-toast";
-import { ToastAction } from "@/components/ui/toast";
 import { logger } from "@/lib/utils";
 import api from "@/api/api";
 import { enhancedApiCall } from "@/api/api-helpers";
@@ -101,14 +99,7 @@ export const useSocket = () => {
           setIsShutdown(true);
           cleanup();
 
-          const retryAction = () => {
-            setIsShutdown(false);
-            setReconnectAttempts(0);
-            connectSocketFnRef.current?.();
-          };
-
-          // Manual toast call removed, enhancedApiCall will handle it
-        }
+          }
         return;
       }
 
@@ -134,7 +125,7 @@ export const useSocket = () => {
         }
       }, delay);
     },
-    [cleanup, toast, maxReconnectAttempts]
+    [cleanup, maxReconnectAttempts]
   );
 
   const setupSocketListeners = useCallback(
@@ -319,7 +310,7 @@ export const useSocket = () => {
         return next;
       });
     }
-  }, [setupSocketListeners, handleReconnection, maxConnectionAttempts]);
+  }, [setupSocketListeners, handleReconnection, maxConnectionAttempts, toast]);
 
   useEffect(() => {
     connectSocketFnRef.current = connectSocket;

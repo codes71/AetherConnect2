@@ -52,8 +52,6 @@ export async function enhancedApiCall<T>({
 
   if (result.error && toast && !suppressErrorToast) {
     const error = result.error;
-    let title = "Error";
-    let description = error.message;
 
     toast({
       title: "Error",
