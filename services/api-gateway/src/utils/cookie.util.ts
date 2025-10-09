@@ -1,6 +1,4 @@
 import type { Response } from "express";
-import { partition } from "rxjs";
-
 export const setAuthCookie = (
   res: Response,
   name: string,
@@ -11,10 +9,19 @@ export const setAuthCookie = (
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
     sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
-    partitioned: process.env.NODE_ENV === "production",
     maxAge: maxAge,
     path: "/",
   };
+
+  console.log(`Setting cookie '${name}':`, {
+    secure: cookieOptions.secure,
+    sameSite: cookieOptions.sameSite,
+    domain: cookieOptions.domain,
+    httpOnly: cookieOptions.httpOnly,
+    path: cookieOptions.path,
+    maxAge: cookieOptions.maxAge,
+    NODE_ENV: process.env.NODE_ENV,
+  });
 
   res.cookie(name, value, cookieOptions);
 };
@@ -24,10 +31,17 @@ export const clearAuthCookie = (res: Response, name: string) => {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
     sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
-    partitioned: process.env.NODE_ENV === "production",
     path: "/",
   };
 
+  console.log(`Clearing cookie '${name}':`, {
+    secure: cookieOptions.secure,
+    sameSite: cookieOptions.sameSite,
+    domain: cookieOptions.domain,
+    httpOnly: cookieOptions.httpOnly,
+    path: cookieOptions.path,
+    NODE_ENV: process.env.NODE_ENV,
+  });
 
   res.clearCookie(name, cookieOptions);
 };
