@@ -9,8 +9,10 @@ export const setAuthCookie = (
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
     sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+    partitioned: process.env.NODE_ENV === "production",
     maxAge: maxAge,
     path: "/",
+    // domain : "aether-connect.vercel.app" // Set your domain here
   };
 
   console.log(`Setting cookie '${name}':`, {

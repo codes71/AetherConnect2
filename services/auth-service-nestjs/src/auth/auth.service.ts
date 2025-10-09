@@ -183,7 +183,6 @@ export class AuthService {
 
   async refreshToken(refreshToken: string) {
     logger.info("--- Starting Token Refresh (Rotation) ---");
-    logger.info(`Incoming token: ${refreshToken}`);
     try {
       const decoded = this.jwtService.verify(refreshToken, {
         secret: process.env.JWT_REFRESH_SECRET,
@@ -418,7 +417,7 @@ export class AuthService {
 
     const accessToken = this.jwtService.sign(payload, {
       secret: process.env.JWT_SECRET,
-      expiresIn: "15m",
+      expiresIn: "30d",
     });
 
     const refreshToken = this.jwtService.sign(

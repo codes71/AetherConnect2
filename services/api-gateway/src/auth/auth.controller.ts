@@ -10,6 +10,7 @@ import {
   UnauthorizedException,
   HttpCode,
   HttpStatus,
+  BadRequestException,
 } from "@nestjs/common";
 import type { Request, Response } from "express";
 import {
@@ -25,7 +26,7 @@ import { createServiceLogger } from "@aether/shared";
 import { setAuthCookie, clearAuthCookie } from "../utils/cookie.util";
 
 const logger = createServiceLogger("auth-controller-gateway");
-const accessTokenExpiry = 15 * 60 * 1000; // 15 minutes
+const accessTokenExpiry = 30 * 24 * 60 * 60 * 1000; // 30 days
 const refreshTokenExpiry = 7 * 24 * 60 * 60 * 1000; // 7 days
 
 @ApiTags("Authentication")
@@ -44,9 +45,18 @@ export class AuthController {
   ) {
     const result = await this.authService.register(createUserDto);
 
-    if (result.success && result.accessToken && result.refreshToken) {
-      setAuthCookie(res, "accessToken", result.accessToken,accessTokenExpiry); // 15 minutes
-      setAuthCookie(res, "refreshToken", result.refreshToken, refreshTokenExpiry); // 7 days
+    if (!result.success) {
+      throw new BadRequestException(result.message || "Registration failed");
+    }
+
+    if (result.accessToken && result.refreshToken) {
+      setAuthCookie(res, "accessToken", result.accessToken, accessTokenExpiry); // 30 days
+      setAuthCookie(
+        res,
+        "refreshToken",
+        result.refreshToken,
+        refreshTokenExpiry
+      ); // 7 days
 
       // Remove tokens from response body
       delete result.accessToken;
@@ -71,9 +81,18 @@ export class AuthController {
       }`
     );
 
-    if (result.success && result.accessToken && result.refreshToken) {
-      setAuthCookie(res, "accessToken", result.accessToken,accessTokenExpiry); // 15 minutes
-      setAuthCookie(res, "refreshToken", result.refreshToken, refreshTokenExpiry); // 7 days
+    if (!result.success) {
+      throw new UnauthorizedException(result.message || "Login failed");
+    }
+
+    if (result.accessToken && result.refreshToken) {
+      setAuthCookie(res, "accessToken", result.accessToken, accessTokenExpiry); // 30 days
+      setAuthCookie(
+        res,
+        "refreshToken",
+        result.refreshToken,
+        refreshTokenExpiry
+      ); // 7 days
 
       // Remove tokens from response body
       delete result.accessToken;
@@ -104,8 +123,13 @@ export class AuthController {
     }
 
     if (result.accessToken && result.refreshToken) {
-      setAuthCookie(res, "accessToken", result.accessToken,accessTokenExpiry); // 15 minutes
-      setAuthCookie(res, "refreshToken", result.refreshToken, refreshTokenExpiry); // 7 days
+      setAuthCookie(res, "accessToken", result.accessToken, accessTokenExpiry); // 30 days
+      setAuthCookie(
+        res,
+        "refreshToken",
+        result.refreshToken,
+        refreshTokenExpiry
+      ); // 7 days
       delete result.accessToken; // Remove from response body
       delete result.refreshToken; // Remove new refresh token from response body
     }
@@ -119,7 +143,7 @@ export class AuthController {
   async logout(@Req() req: Request, @Res({ passthrough: true }) res: Response) {
     try {
       const refreshToken = req.cookies["refreshToken"];
-      logger.info(`Logout: Refresh token from cookies: ${refreshToken}`);
+      // logger.info(`Logout: Refresh token from cookies: ${refreshToken}`);
 
       if (refreshToken) {
         // Invalidate refresh token in backend
