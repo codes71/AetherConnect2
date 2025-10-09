@@ -5,12 +5,12 @@
   "workspaces": [
     "services/*",
     "packages/*",
-    "apps/*",
-    "AetherConnect-Frontend"
+    "apps/*"
   ],
   "scripts": {
     "lint": "next lint",
     "dev": "concurrently \"pnpm dev:auth\" \"pnpm dev:gateway\" \"pnpm dev:message\"",
+    "dev:prod": "NODE_ENV=production pnpm start",
     "clean": "pnpm -r run clean",
     "cleanm": "pnpm -r run cleanmodules",
     "start": "concurrently \"pnpm start:auth\" \"pnpm start:gateway\" \"pnpm start:message\"",
@@ -46,5 +46,8 @@
   "devDependencies": {
     "concurrently": "^9.2.1",
     "eslint-plugin-nestjs": "^1.2.3"
+  },
+  "dependencies": {
+    "url": "^0.11.4"
   }
 }

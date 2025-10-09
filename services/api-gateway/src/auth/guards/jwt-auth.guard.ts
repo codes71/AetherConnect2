@@ -10,12 +10,14 @@ export class JwtAuthGuard implements CanActivate {
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest();
-    
-    const token = request.cookies['accessToken'];
-    if (!token) {
-      logger.warn('No access token found in cookies');
+
+    const authHeader = request.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      logger.warn('No access token found in Authorization header');
       throw new UnauthorizedException('Access token required');
     }
+
+    const token = authHeader.substring(7); // Remove 'Bearer ' prefix
     
     try {
       const result = await this.authService.validateToken(token);

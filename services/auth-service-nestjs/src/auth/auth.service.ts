@@ -1,4 +1,4 @@
-import { Injectable } from "@nestjs/common";
+import { Injectable, Inject } from "@nestjs/common";
 import { TokenExpiredError, JsonWebTokenError } from "@nestjs/jwt";
 import { InjectRepository } from "@nestjs/typeorm";
 import { Repository } from "typeorm";
@@ -6,6 +6,7 @@ import { JwtService } from "@nestjs/jwt";
 import * as bcrypt from "bcrypt";
 import { User } from "../users/entities/user.entity";
 import { createServiceLogger } from "@aether/shared";
+import { ClientProxy } from "@nestjs/microservices";
 
 const logger = createServiceLogger("auth-service");
 
@@ -14,7 +15,8 @@ export class AuthService {
   constructor(
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
-    private readonly jwtService: JwtService
+    private readonly jwtService: JwtService,
+    @Inject('REDIS_CLIENT') private readonly redisClient: ClientProxy
   ) {}
 
   async createUser(data: any) {
@@ -47,19 +49,13 @@ export class AuthService {
       const savedUser = await this.userRepository.save(user);
 
       // Generate tokens
-      const { accessToken, refreshToken } = await this.generateTokens(
-        savedUser
-      );
-
-      // Save refresh token
-      await this.saveRefreshToken(savedUser.id, refreshToken);
+      const { accessToken } = await this.generateTokens(savedUser);
 
       return {
         success: true,
         message: "User created successfully",
         user: this.formatUserData(savedUser),
         accessToken,
-        refreshToken,
       };
     } catch (error) {
       logger.error("User creation failed:", error);
@@ -92,17 +88,13 @@ export class AuthService {
       }
 
       // Generate tokens
-      const { accessToken, refreshToken } = await this.generateTokens(user);
-
-      // Save refresh token
-      await this.saveRefreshToken(user.id, refreshToken);
+      const { accessToken } = await this.generateTokens(user);
 
       return {
         success: true,
         message: "Login successful",
         user: this.formatUserData(user),
         accessToken,
-        refreshToken,
       };
     } catch (error) {
       logger.error("Login failed:", error);
@@ -112,34 +104,46 @@ export class AuthService {
 
   async validateToken(token: string) {
     try {
-      let decoded: any;
       let usedSecret: string;
 
+      // Check if token is blacklisted (only if Redis is enabled)
+      if (process.env.REDIS_ENABLED === 'true') {
+        try {
+          const isBlacklisted = await this.redisClient.send('get_blacklisted_token', token).toPromise();
+          if (isBlacklisted) {
+            logger.warn("Attempted to use a blacklisted token.");
+            return {
+              success: false,
+              message: "Token is blacklisted",
+              isValid: false,
+            };
+          }
+        } catch (redisError) {
+          logger.warn("Redis not available for blacklist check, skipping:", redisError.message);
+        }
+      }
+
+      // Determine token type and use appropriate secret
+      let decoded: any;
+
+      // First try to validate as regular access token
       try {
         usedSecret = process.env.JWT_SECRET;
-        logger.debug("Attempting to verify token with JWT_SECRET");
+        logger.debug("Attempting to verify token with JWT_SECRET (access token)");
         decoded = this.jwtService.verify(token, {
           secret: usedSecret,
         });
-      } catch (error) {
-        logger.debug(
-          "Verification with JWT_SECRET failed, attempting with JWT_WS_SECRET"
-        );
-        // If initial verification fails, try with WS secret if it's a WS token
+      } catch (accessError) {
+        logger.debug("Token not a valid access token, trying WS token");
+        // Try as WS token
         try {
-          usedSecret = process.env.JWT_WS_SECRET;
+          usedSecret = process.env.JWT_WS_SECRET || "your-ws-secret-key";
+          logger.debug("Attempting to verify token with JWT_WS_SECRET (WS token)");
           decoded = this.jwtService.verify(token, {
             secret: usedSecret,
           });
-          if (decoded.type !== "ws") {
-            logger.warn(
-              "Token verified with JWT_WS_SECRET but type is not 'ws'"
-            );
-            throw new Error("Not a WebSocket token");
-          }
-          logger.debug("Token successfully verified with JWT_WS_SECRET");
-        } catch (wsError) {
-          logger.error("Verification with JWT_WS_SECRET");
+        } catch (error) {
+          logger.error("Token verification failed for both access and WS tokens:", error);
           return {
             success: false,
             message: "Invalid token",
@@ -177,145 +181,6 @@ export class AuthService {
         success: false,
         message: "Invalid token",
         isValid: false,
-      };
-    }
-  }
-
-  async refreshToken(refreshToken: string) {
-    logger.info("--- Starting Token Refresh (Rotation) ---");
-    try {
-      const decoded = this.jwtService.verify(refreshToken, {
-        secret: process.env.JWT_REFRESH_SECRET,
-      });
-      logger.info("Token verification successful", { decoded });
-
-      const user = await this.userRepository.findOne({
-        where: {
-          id: decoded.userId,
-        },
-      });
-      logger.info(`User lookup result for userId ${decoded.userId}:`, {
-        user: user ? "Found" : "Not Found",
-      });
-
-      if (
-        !user ||
-        !user.refreshTokenHash ||
-        user.refreshTokenExpiresAt < new Date()
-      ) {
-        logger.warn("Refresh token check failed", {
-          userExists: !!user,
-          hasHash: !!user?.refreshTokenHash,
-          isExpired: user?.refreshTokenExpiresAt < new Date(),
-        });
-        return {
-          success: false,
-          message: "Invalid or expired refresh token",
-        };
-      }
-
-      // Check if this exact token was already used by comparing issued time
-      const tokenIssuedAt = new Date(decoded.iat * 1000);
-      const lastTokenIssuedAt = user.lastRefreshTokenIssuedAt || new Date(0);
-
-      if (tokenIssuedAt <= lastTokenIssuedAt) {
-        logger.warn("Token replay attack detected - token already used");
-        return {
-          success: false,
-          message: "Token already used or invalid",
-        };
-      }
-
-      const isValidRefresh = await bcrypt.compare(
-        refreshToken,
-        user.refreshTokenHash
-      );
-      logger.info(`bcrypt comparison result: ${isValidRefresh}`);
-
-      if (!isValidRefresh) {
-        logger.warn("Token hash mismatch - invalid token");
-        return {
-          success: false,
-          message: "Invalid refresh token",
-        };
-      }
-
-      // --- START: Refresh Token Rotation Logic (Atomic Transaction) ---
-      logger.info(
-        "Old refresh token validated. Generating new tokens and rotating atomically."
-      );
-
-      // Generate new access token AND new refresh token first
-      const { accessToken: newAccessToken, refreshToken: newRefreshToken } =
-        await this.generateTokens(user);
-      logger.info("New access and refresh tokens generated.");
-
-      // Hash the new refresh token
-      const newRefreshTokenHash = await bcrypt.hash(newRefreshToken, 12);
-      const newRefreshTokenExpiresAt = new Date(
-        Date.now() + 7 * 24 * 60 * 60 * 1000
-      ); // 7 days
-
-      // Perform invalidation and saving in a single transaction
-      const queryRunner =
-        this.userRepository.manager.connection.createQueryRunner();
-      await queryRunner.connect();
-      await queryRunner.startTransaction();
-
-      try {
-        // Invalidate the old refresh token
-        await queryRunner.manager.update(User, user.id, {
-          refreshTokenHash: null, // Clear the hash
-          refreshTokenExpiresAt: new Date(0), // Set to a past date
-        });
-        logger.info("Old refresh token invalidated in DB within transaction.");
-
-        // Save the new refresh token and track issued time
-        await queryRunner.manager.update(User, user.id, {
-          refreshTokenHash: newRefreshTokenHash,
-          refreshTokenExpiresAt: newRefreshTokenExpiresAt,
-          lastRefreshTokenIssuedAt: new Date(decoded.iat * 1000),
-        });
-        logger.info("New refresh token saved to DB within transaction.");
-
-        await queryRunner.commitTransaction();
-        logger.info("Transaction committed successfully.");
-      } catch (err) {
-        await queryRunner.rollbackTransaction();
-        logger.error("Transaction rolled back due to error:", err);
-        throw err; // Re-throw the error after rollback
-      } finally {
-        await queryRunner.release();
-      }
-
-      // --- END: Refresh Token Rotation Logic (Atomic Transaction) ---
-
-      logger.info("--- Token Refresh (Rotation) Successful ---");
-      return {
-        success: true,
-        message: "Token refreshed successfully",
-        accessToken: newAccessToken, // Return the new access token
-        refreshToken: newRefreshToken, // Return the new refresh token
-      };
-    } catch (error) {
-      logger.error("Token refresh failed during try-catch:", {
-        error: error.name,
-        message: error.message,
-      });
-      if (error instanceof TokenExpiredError) {
-        return {
-          success: false,
-          message: "Refresh token has expired",
-        };
-      } else if (error instanceof JsonWebTokenError) {
-        return {
-          success: false,
-          message: "Invalid refresh token signature",
-        };
-      }
-      return {
-        success: false,
-        message: "An unexpected error occurred during token refresh",
       };
     }
   }
@@ -375,36 +240,29 @@ export class AuthService {
     }
   }
 
-  async logout(refreshToken: string) {
+  async logout(accessToken: string) {
     try {
-      const decoded = this.jwtService.verify(refreshToken, {
-        secret: process.env.JWT_REFRESH_SECRET,
-      });
-      const userId = decoded.userId;
-
-      await this.userRepository.update(userId, {
-        refreshTokenHash: null,
-        refreshTokenExpiresAt: new Date(0),
-        lastRefreshTokenIssuedAt: new Date(0),
-      });
-
+      // Only blacklist token if Redis is enabled
+      if (process.env.REDIS_ENABLED === 'true') {
+        const decoded = this.jwtService.decode(accessToken);
+        if (decoded && typeof decoded === 'object' && decoded.exp) {
+          const ttl = decoded.exp - Math.floor(Date.now() / 1000); // Remaining time in seconds
+          if (ttl > 0) {
+            try {
+              await this.redisClient.send('set_blacklisted_token', { token: accessToken, ttl }).toPromise();
+              logger.info(`Access token blacklisted for ${ttl} seconds.`);
+            } catch (redisError) {
+              logger.warn("Redis not available for token blacklisting, logout still successful:", redisError.message);
+            }
+          }
+        }
+      }
       return {
         success: true,
         message: "Logout successful",
       };
     } catch (error) {
       logger.error("Logout failed:", error);
-      if (error instanceof TokenExpiredError) {
-        return {
-          success: false,
-          message: "Refresh token has expired",
-        };
-      } else if (error instanceof JsonWebTokenError) {
-        return {
-          success: false,
-          message: "Invalid refresh token signature",
-        };
-      }
       return {
         success: false,
         message: "Logout failed",
@@ -417,30 +275,10 @@ export class AuthService {
 
     const accessToken = this.jwtService.sign(payload, {
       secret: process.env.JWT_SECRET,
-      expiresIn: "30d",
+      expiresIn: "30d", // 30 days expiry as per new requirement
     });
 
-    const refreshToken = this.jwtService.sign(
-      { ...payload, type: "refresh" },
-      {
-        secret: process.env.JWT_REFRESH_SECRET,
-        expiresIn: "7d",
-      }
-    );
-
-    return { accessToken, refreshToken };
-  }
-
-  private async saveRefreshToken(userId: number, refreshToken: string) {
-    const refreshTokenHash = await bcrypt.hash(refreshToken, 12);
-    const refreshTokenExpiresAt = new Date(
-      Date.now() + 7 * 24 * 60 * 60 * 1000
-    ); // 7 days
-
-    await this.userRepository.update(userId, {
-      refreshTokenHash,
-      refreshTokenExpiresAt,
-    });
+    return { accessToken };
   }
 
   private formatUserData(user: User) {

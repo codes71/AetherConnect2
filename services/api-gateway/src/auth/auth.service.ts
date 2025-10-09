@@ -53,22 +53,9 @@ export class AuthService implements OnModuleInit {
     }
   }
 
-  async refreshToken(refreshToken: string) {
+  async logout(accessToken: string) {
     try {
-      return await this.authClient.RefreshToken({ refreshToken });
-    } catch (error) {
-      logger.error('RefreshToken gRPC call failed:', error);
-      return {
-        success: false,
-        message: 'Token refresh failed',
-        error: 'Internal server error',
-      };
-    }
-  }
-
-  async logout(refreshToken: string) {
-    try {
-      return await this.authClient.Logout({ refreshToken });
+      return await this.authClient.Logout({ accessToken });
     } catch (error) {
       logger.error('Logout gRPC call failed:', error);
       return {

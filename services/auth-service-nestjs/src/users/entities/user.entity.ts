@@ -23,15 +23,6 @@ export class User {
   @Column('simple-array', { default: 'user' })
   roles: string[];
 
-  @Column({ name: 'refresh_token_hash', length: 255, nullable: true })
-  refreshTokenHash: string;
-
-  @Column({ name: 'refresh_token_expires_at', type: 'timestamp', nullable: true })
-  refreshTokenExpiresAt: Date;
-
-  @Column({ name: 'last_refresh_token_issued_at', type: 'timestamp', nullable: true })
-  lastRefreshTokenIssuedAt: Date;
-
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
 

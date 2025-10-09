@@ -69,22 +69,22 @@ export class AuthController {
     }
   }
 
-  @GrpcMethod("AuthService", "RefreshToken")
-  async refreshToken(data: any) {
-    try {
-      logger.info("RefreshToken gRPC call received");
-      const result = await this.authService.refreshToken(data.refreshToken);
-      logger.info("RefreshToken completed", { success: result.success });
-      return result;
-    } catch (error) {
-      logger.error("RefreshToken failed:", error);
-      return {
-        success: false,
-        message: "Token refresh failed",
-        error: error.message,
-      };
-    }
-  }
+  // @GrpcMethod("AuthService", "RefreshToken")
+  // async refreshToken(data: any) {
+  //   try {
+  //     logger.info("RefreshToken gRPC call received");
+  //     const result = await this.authService.;
+  //     logger.info("RefreshToken completed", { success: result.success });
+  //     return result;
+  //   } catch (error) {
+  //     logger.error("RefreshToken failed:", error);
+  //     return {
+  //       success: false,
+  //       message: "Token refresh failed",
+  //       error: error.message,
+  //     };
+  //   }
+  // }
 
   @GrpcMethod("AuthService", "GetUserProfile")
   async getUserProfile(data: any) {
