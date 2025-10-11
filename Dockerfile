@@ -1,27 +1,36 @@
-FROM node:20-alpine
+FROM node:20
 
 WORKDIR /app
 
-# Copy package files and tsconfig
-COPY package.json pnpm-lock.yaml pnpm-workspace.yaml tsconfig.json ./
+# Install pnpm
+RUN npm install -g pnpm
+
+# Copy package files and workspace config
+COPY package.json tsconfig.json pnpm-workspace.yaml pnpm-lock.yaml ./
 
 # Copy all packages and services
 COPY packages ./packages
 COPY services ./services
 
-# Install pnpm, pm2, and netcat for health checks
-RUN npm install -g pnpm pm2
-RUN apk add --no-cache netcat-openbsd
+# Install pm2 and netcat for health checks
+RUN apt-get update && npm install -g pm2 && apt-get install -y netcat-openbsd
+
+# Copy environment file
+COPY .env ./.env
+
+# Install dependencies with pnpm
 RUN pnpm install --frozen-lockfile
 
-# Build all services
-RUN cd packages/shared && pnpm run build && ls -la dist/
+# Install dependencies for shared package and build it
+RUN cd packages/shared && pnpm install && pnpm run build && ls -la dist/
 
 RUN ls -lR services/
-# Ensure workspace linking works
-RUN cd services/auth-service-nestjs && pnpm build && test -f dist/main.js
-RUN cd services/message-service && pnpm build && test -f dist/main.js
-RUN cd services/api-gateway && pnpm build && test -f dist/main.js
+# Install dependencies and build auth service
+RUN cd services/auth-service-nestjs && pnpm install && pnpm run build && test -f dist/main.js
+# Install dependencies and build message service
+RUN cd services/message-service && pnpm install && pnpm run build && test -f dist/main.js
+# Install dependencies and build API gateway
+RUN cd services/api-gateway && pnpm install && pnpm run build && test -f dist/main.js
 
 
 # Create PM2 ecosystem file and startup script
