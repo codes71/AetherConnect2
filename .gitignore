@@ -83,12 +83,12 @@ Last.md
 # Firebase/Genkit debug
 firebase-debug.log
 firestore-debug.log
-env.example
 
 # Amazon Q CLI
 .amazonq/
 
 # Scripts (if not needed for deployment)
+!.env.example
 !ecosystem.config.js
 !services/api-gateway/src/types/
 !services/api-gateway/src/types/express.d.ts

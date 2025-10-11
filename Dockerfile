@@ -16,7 +16,7 @@ COPY services ./services
 RUN apt-get update && npm install -g pm2 && apt-get install -y netcat-openbsd
 
 # Copy environment file
-COPY .env ./.env
+COPY .env.example ./.env
 
 # Install dependencies with pnpm
 RUN pnpm install --frozen-lockfile
